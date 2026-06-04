@@ -119,7 +119,11 @@ function EditorialHero({
   const primary = safePhotos[activeIndex % safePhotos.length]
   const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, HERO_PHOTO_COUNT))
   const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
-  const channelLabels = ['正片', '场照', '旅拍']
+  const channelLabels = [
+    { name: '正片', detail: '精选成片作品集' },
+    { name: '场照', detail: '活动现场纪实' },
+    { name: '旅拍', detail: '旅途与目的地影像' },
+  ]
   const handleSelectSlide = (index: number) => {
     if (index === activeIndex) {
       return
@@ -187,13 +191,16 @@ function EditorialHero({
             联系方式 QQ: 774202796 WX: 13634085297
           </p>
           <div className="mt-5 grid w-full max-w-[25rem] grid-cols-3 gap-2">
-            {channelLabels.map((label) => (
+            {channelLabels.map((item) => (
               <div
-                key={label}
-                className="relative overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl sm:px-4 sm:py-3.5"
+                key={item.name}
+                className="relative min-h-[5rem] overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl sm:px-4 sm:py-3.5"
               >
                 <span className="block font-display text-[clamp(1.25rem,2vw,1.75rem)] font-semibold leading-none tracking-normal">
-                  {label}
+                  {item.name}
+                </span>
+                <span className="mt-2 block text-[10px] leading-4 text-white/58">
+                  {item.detail}
                 </span>
               </div>
             ))}
