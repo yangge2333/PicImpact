@@ -8,7 +8,7 @@ import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
 import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
@@ -135,6 +135,16 @@ function EditorialHero({
     setActiveIndex(index)
   }
 
+  useEffect(() => {
+    if (accordionPhotos.length <= 1) {
+      return
+    }
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % accordionPhotos.length)
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [accordionPhotos.length])
+
   return (
     <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
       <div className="absolute inset-0 flex bg-black">
@@ -148,7 +158,7 @@ function EditorialHero({
               className={`group relative h-full min-w-0 appearance-none overflow-hidden border-0 border-r border-white/10 p-0 text-left transition-[flex] duration-700 ease-[var(--ease-out-expo)] last:border-r-0 ${
                 isActive ? 'flex-[5.8]' : 'flex-[0.72] hover:flex-[1.15]'
               }`}
-              onMouseEnter={() => handleSelectSlide(index)}
+              onClick={() => handleSelectSlide(index)}
               onFocus={() => handleSelectSlide(index)}
             >
               <HeroImage photo={photo} priority={index === 0} variantBaseUrl={variantBaseUrl} />
