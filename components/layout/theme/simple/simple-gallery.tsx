@@ -54,10 +54,6 @@ export default function SimpleGallery(props: Readonly<ImageHandleProps>) {
   })
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
-  const customIndexOriginEnable = useMemo(
-    () => configData?.customIndexOriginEnable === true,
-    [configData]
-  )
   // Prefer the live config, but fall back to the server-passed base on the first
   // render (before the config SWR resolves) so the feed serves AVIF immediately
   // instead of double-loading preview thumbnails.
@@ -68,9 +64,9 @@ export default function SimpleGallery(props: Readonly<ImageHandleProps>) {
     return function SimpleRender({ index, data }: { index: number, data: ImageType, width: number }) {
       // Single-column feed: only the first image is above the fold, so eager-load
       // the first two to cover the LCP element without wasting bandwidth.
-      return <GalleryImage photo={data} customIndexOriginEnable={customIndexOriginEnable} variantBaseUrl={variantBaseUrl} priority={index < 2} />
+      return <GalleryImage photo={data} variantBaseUrl={variantBaseUrl} priority={index < 2} />
     }
-  }, [customIndexOriginEnable, variantBaseUrl])
+  }, [variantBaseUrl])
   const t = useTranslations()
 
   // Debounce filter changes

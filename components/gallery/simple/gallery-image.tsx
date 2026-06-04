@@ -14,31 +14,38 @@ import { SIMPLE_GRID_SIZES } from '~/lib/image/grid-image-sizes'
 
 export default function GalleryImage({
   photo,
-  customIndexOriginEnable,
   variantBaseUrl = '',
   priority = false,
 }: {
   photo: ImageType
-  customIndexOriginEnable: boolean
   variantBaseUrl?: string
   priority?: boolean
 }) {
   const router = useRouter()
   const avifOk = useAvifSupport()
   const [variantFailed, setVariantFailed] = useState(false)
-  // When variants are ready they take precedence for in-feed display (small,
-  // fast, never the multi-MB original). The legacy preferred/fallback ladder
-  // (which honours the customIndexOriginEnable opt-in to show originals) only
-  // applies when no variant is available yet.
+  // The simple feed must never load the full-resolution original. Use the same
+  // lightweight ladder as the masonry grid: responsive variants, then preview,
+  // then the blurhash/skeleton placeholder for rows that have not been backfilled.
   const variantReady = !variantFailed && hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)
-  const preferredSrc = customIndexOriginEnable ? photo.url || photo.preview_url : photo.preview_url || photo.url
-  const fallbackSrc = customIndexOriginEnable ? photo.preview_url || photo.url : photo.url || photo.preview_url
-  const [imgSrc, setImgSrc] = useState(preferredSrc)
+  const previewSrc = photo.preview_url || ''
   const [isLoading, setIsLoading] = useState(true)
   const dataURL = useBlurImageDataUrl(photo.blurhash)
   const hasRealBlurhash = !!photo.blurhash && photo.blurhash !== DEFAULT_HASH
-  const hasFallbackSrc = !!fallbackSrc && fallbackSrc !== preferredSrc
-  const useUnoptimized = customIndexOriginEnable || (!!photo.preview_url && imgSrc === photo.preview_url)
+  const imageProps = variantReady
+    ? {
+        src: photo.image_key,
+        loader: makeVariantLoader({
+          base: variantBaseUrl,
+          imageKey: photo.image_key,
+          readyMaxWidth: photo.ready_max_width,
+          format: (avifOk ? 'avif' : 'webp') as 'avif' | 'webp',
+        }),
+      }
+    : previewSrc
+      ? { src: previewSrc, overrideSrc: previewSrc, unoptimized: true }
+      : null
+  const blurhashOnly = !imageProps && hasRealBlurhash
 
   const exifParts: string[] = []
   if (photo?.exif?.make && photo?.exif?.model) {
@@ -81,53 +88,44 @@ export default function GalleryImage({
             )}
           />
         )}
-        {variantReady ? (
+        {imageProps ? (
           <MotionImage
-            key="variant"
+            {...imageProps}
+            key={variantReady ? 'variant' : 'preview'}
             className={cn('w-full h-auto', isLoading && !hasRealBlurhash && 'animate-pulse')}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            src={photo.image_key}
             alt={photo.title}
             width={photo.width}
             height={photo.height}
             sizes={SIMPLE_GRID_SIZES}
             {...(priority ? { priority: true } : { loading: 'lazy' as const })}
-            loader={makeVariantLoader({
-              base: variantBaseUrl,
-              imageKey: photo.image_key,
-              readyMaxWidth: photo.ready_max_width,
-              format: (avifOk ? 'avif' : 'webp') as 'avif' | 'webp',
-            })}
-            placeholder={hasRealBlurhash ? 'blur' : 'empty'}
-            blurDataURL={dataURL}
-            onLoad={() => setIsLoading(false)}
-            onError={() => setVariantFailed(true)}
-          />
-        ) : (
-          <MotionImage
-            key={imgSrc}
-            className={cn('w-full h-auto', isLoading && !hasRealBlurhash && 'animate-pulse')}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            src={imgSrc}
-            overrideSrc={imgSrc}
-            alt={photo.title}
-            width={photo.width}
-            height={photo.height}
-            {...(priority ? { priority: true } : { loading: 'lazy' as const })}
-            unoptimized={useUnoptimized}
             placeholder={hasRealBlurhash ? 'blur' : 'empty'}
             blurDataURL={dataURL}
             onLoad={() => setIsLoading(false)}
             onError={() => {
-              if (hasFallbackSrc && imgSrc !== fallbackSrc) {
-                setImgSrc(fallbackSrc)
+              if (variantReady) {
+                setVariantFailed(true)
                 return
               }
               setIsLoading(false)
+            }}
+          />
+        ) : blurhashOnly ? (
+          <div
+            aria-hidden
+            className="w-full bg-cover bg-center"
+            style={{
+              aspectRatio: photo.width > 0 && photo.height > 0 ? `${photo.width} / ${photo.height}` : '1',
+              backgroundImage: `url(${dataURL})`,
+            }}
+          />
+        ) : (
+          <Skeleton
+            className="w-full rounded-none bg-stone-200/80 dark:bg-white/10"
+            style={{
+              aspectRatio: photo.width > 0 && photo.height > 0 ? `${photo.width} / ${photo.height}` : '1',
             }}
           />
         )}
