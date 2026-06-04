@@ -375,29 +375,29 @@ function EditorialHero({
         trigger={activeIndex}
       />
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-14 pt-20 sm:px-10 md:pb-16 lg:px-16 lg:pb-20">
-        <div className="relative w-full max-w-[min(42rem,calc(100vw-2.5rem))] overflow-hidden border border-white/10 bg-black/24 px-5 py-5 shadow-[0_24px_90px_rgba(0,0,0,0.22)] backdrop-blur-[2px] sm:px-7 sm:py-6">
-          <p className="mb-4 text-[11px] font-semibold uppercase text-white/66">
+      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-12 pt-20 sm:px-10 md:pb-14 lg:px-16 lg:pb-16">
+        <div className="relative w-full max-w-[min(46rem,calc(100vw-2.5rem))] overflow-hidden border border-white/10 bg-black/22 px-4 py-4 shadow-[0_20px_76px_rgba(0,0,0,0.2)] backdrop-blur-[2px] sm:px-5 sm:py-4">
+          <p className="mb-3 text-[10px] font-semibold uppercase text-white/62">
             Featured Gallery
           </p>
-          <h1 className="font-display text-[clamp(2.7rem,5.4vw,5.6rem)] font-semibold leading-[1.02] tracking-normal text-white drop-shadow-[0_8px_34px_rgba(0,0,0,0.34)]">
+          <h1 className="whitespace-nowrap font-display text-[clamp(2.35rem,3.85vw,3.95rem)] font-semibold leading-none tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)]">
             {featuredTitle}
           </h1>
-          <p className="mt-5 max-w-lg text-sm leading-7 text-white/76 sm:text-base">
+          <p className="mt-4 max-w-md text-xs leading-6 text-white/72 sm:text-sm">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <div className="mt-7 grid w-full max-w-[27rem] grid-cols-2 gap-2">
+          <div className="mt-5 grid w-full max-w-[23rem] grid-cols-2 gap-2">
             {channelAlbums.map((album) => (
               <Link
                 key={album.name}
                 href={album.href}
-                className="group relative overflow-hidden border border-white/24 bg-black/18 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-500 hover:border-white/62 hover:bg-white/12 sm:px-6 sm:py-5"
+                className="group relative overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl transition duration-500 hover:border-white/58 hover:bg-white/12 sm:px-4 sm:py-3.5"
               >
-                <span className="absolute inset-x-4 bottom-0 h-px origin-left scale-x-0 bg-white transition-transform duration-500 group-hover:scale-x-100" />
-                <span className="block font-display text-[clamp(1.8rem,3vw,2.7rem)] font-semibold leading-none tracking-normal">
+                <span className="absolute inset-x-3 bottom-0 h-px origin-left scale-x-0 bg-white transition-transform duration-500 group-hover:scale-x-100" />
+                <span className="block font-display text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold leading-none tracking-normal">
                   {album.name}
                 </span>
-                <span className="mt-2.5 block text-[11px] leading-5 text-white/62 transition-colors group-hover:text-white/86">
+                <span className="mt-2 block text-[10px] leading-4 text-white/58 transition-colors group-hover:text-white/84">
                   {album.detail}
                 </span>
               </Link>
