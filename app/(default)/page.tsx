@@ -3,7 +3,7 @@ import type { ImageType } from '~/types'
 import { getImagesData, getImagesPageTotal, getDisplayConfig, initDailyIfNeeded } from '~/server/actions/images'
 import { getVariantBaseUrl } from '~/server/lib/variant-storage'
 import SimpleGallery from '~/components/layout/theme/simple/simple-gallery.tsx'
-import { cachedConfigsByKeys } from '~/server/lib/cache'
+import { cachedAlbumsShow, cachedConfigsByKeys } from '~/server/lib/cache'
 import { toCustomInfo } from '~/server/lib/config-transform'
 import DefaultGallery from '~/components/layout/theme/default/default-gallery.tsx'
 import PolaroidGallery from '~/components/layout/theme/polaroid/polaroid-gallery.tsx'
@@ -23,9 +23,10 @@ export default async function Home() {
 
   // Server-side data for the LCP preload hint: the first gallery image and the
   // variant CDN base. Best-effort — a failure here must never break the page.
-  const [firstPage, variantBaseUrl] = await Promise.all([
+  const [firstPage, variantBaseUrl, albums] = await Promise.all([
     getImagesData(1, '/').catch(() => [] as ImageType[]),
     getVariantBaseUrl().catch(() => ''),
+    cachedAlbumsShow().catch(() => []),
   ])
 
   const props: ImageHandleProps = {
@@ -34,6 +35,7 @@ export default async function Home() {
     album: '/',
     totalHandle: getImagesPageTotal,
     configHandle: getDisplayConfig,
+    albums,
     // Server-resolved so the gallery serves AVIF on the first render (no
     // preview double-load while the client config SWR is still pending).
     variantBaseUrl,

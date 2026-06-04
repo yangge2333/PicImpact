@@ -2,6 +2,7 @@
 
 import type { ImageHandleProps } from '~/types/props.ts'
 import Image from 'next/image'
+import Link from 'next/link'
 import useSWRInfinite from 'swr/infinite'
 import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
@@ -73,40 +74,101 @@ function HeroImage({ photo, priority = false }: { photo?: ImageType, priority?: 
   )
 }
 
-function EditorialHero({ photos, title }: { photos: ImageType[], title?: string }) {
-  const primary = photos[0]
-  const secondary = photos[1]
-  const tertiary = photos[2]
+function EditorialHero({
+  photos,
+  title,
+  albums = [],
+}: {
+  photos: ImageType[]
+  title?: string
+  albums?: NonNullable<ImageHandleProps['albums']>
+}) {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const safePhotos = photos.length > 0 ? photos : []
+  const primary = safePhotos[activeIndex % safePhotos.length]
+  const secondary = safePhotos[(activeIndex + 1) % safePhotos.length]
+  const tertiary = safePhotos[(activeIndex + 2) % safePhotos.length]
+  const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
+  const channelAlbums = ['正片', '旅拍'].map((name) => {
+    const album = albums.find((item) => item.name === name || item.album_value.includes(name))
+    return {
+      name,
+      href: album?.album_value || `/${name}`,
+      detail: album?.detail,
+    }
+  })
+
+  useEffect(() => {
+    if (safePhotos.length <= 1) {
+      return
+    }
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % safePhotos.length)
+    }, 2000)
+    return () => window.clearInterval(timer)
+  }, [safePhotos.length])
+
   return (
     <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
-      <HeroImage photo={primary} priority />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,8,0.72),rgba(12,10,8,0.28)_46%,rgba(12,10,8,0.08))]" />
+      {primary && (
+        <div key={primary.id} className="absolute inset-0 hero-slide-in">
+          <HeroImage photo={primary} priority />
+        </div>
+      )}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_64%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(90deg,rgba(13,12,11,0.76),rgba(13,12,11,0.22)_48%,rgba(13,12,11,0.08))]" />
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-6 pb-16 pt-20 sm:px-10 lg:px-16 lg:pb-20">
-        <div className="max-w-3xl">
-          <p className="mb-5 text-xs font-medium uppercase tracking-[0.32em] text-white/70">
-            Curated Photography
+      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-6 pb-14 pt-20 sm:px-10 lg:px-16 lg:pb-20">
+        <div className="max-w-4xl">
+          <p className="mb-5 text-xs font-medium uppercase text-white/70">
+            Featured Gallery
           </p>
-          <h1 className="font-display text-5xl font-semibold leading-[0.98] tracking-normal text-white sm:text-6xl lg:text-7xl">
-            {title || primary?.album_name || 'PicImpact'}
+          <h1 className="font-display text-6xl font-semibold leading-[0.95] tracking-normal text-white sm:text-7xl lg:text-8xl">
+            {featuredTitle}
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-white/76 sm:text-lg">
-            {primary?.detail || primary?.title || 'A quiet collection of light, place, and memory.'}
+          <p className="mt-6 max-w-xl text-base leading-7 text-white/78 sm:text-lg">
+            {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
+          <div className="mt-10 grid max-w-xl grid-cols-2 gap-3 sm:flex sm:max-w-none sm:gap-4">
+            {channelAlbums.map((album) => (
+              <Link
+                key={album.name}
+                href={album.href}
+                className="group border border-white/35 bg-white/10 px-6 py-4 text-left text-white backdrop-blur-xl transition duration-500 hover:border-white/75 hover:bg-white/18"
+              >
+                <span className="block font-display text-3xl font-semibold leading-none tracking-normal sm:text-4xl">
+                  {album.name}
+                </span>
+                <span className="mt-3 block text-xs leading-5 text-white/68 transition-colors group-hover:text-white/86">
+                  {album.detail || (album.name === '正片' ? '精选成片作品集' : '旅途与目的地影像')}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
-      {(secondary || tertiary) && (
-        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[31vw] max-w-[520px] grid-cols-2 gap-3 lg:grid">
+      {safePhotos.length > 1 && (
+        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[31vw] max-w-[560px] grid-cols-2 gap-3 lg:grid">
           {[secondary, tertiary].filter(Boolean).map((photo, index) => (
             <div
-              key={photo!.id}
-              className={index === 0 ? 'relative aspect-[4/5] translate-y-10 overflow-hidden shadow-2xl' : 'relative aspect-[4/5] overflow-hidden shadow-2xl'}
+              key={`${photo!.id}-${activeIndex}-${index}`}
+              className={index === 0 ? 'relative aspect-[4/5] translate-y-10 overflow-hidden shadow-2xl hero-card-in' : 'relative aspect-[4/5] overflow-hidden shadow-2xl hero-card-in-delayed'}
             >
               <HeroImage photo={photo} />
             </div>
           ))}
         </div>
       )}
+      <div className="absolute bottom-6 left-6 z-10 flex gap-2 sm:left-auto sm:right-16">
+        {safePhotos.slice(0, Math.min(safePhotos.length, 6)).map((photo, index) => (
+          <button
+            key={photo.id}
+            type="button"
+            aria-label={`Show featured image ${index + 1}`}
+            className={`h-1.5 w-8 bg-white/40 transition-all duration-500 ${index === activeIndex ? 'w-14 bg-white' : 'hover:bg-white/70'}`}
+            onClick={() => setActiveIndex(index)}
+          />
+        ))}
+      </div>
     </section>
   )
 }
@@ -211,6 +273,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
         <EditorialHero
           photos={heroPhotos}
           title={configData?.customTitle}
+          albums={props.albums}
         />
       )}
       <section className="bg-background px-5 py-10 sm:px-8 lg:px-12">

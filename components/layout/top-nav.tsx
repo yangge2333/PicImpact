@@ -45,6 +45,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
   const themeToggleLabel = isHydrated
     ? t(resolvedTheme === 'light' ? 'Button.dark' : 'Button.light')
     : t('Button.theme')
+  const showAlbumTabs = pathname !== '/'
 
   return (
     <>
@@ -60,33 +61,35 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
           </Link>
 
           {/* Center: Album tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide mx-4">
-            <Link
-              href="/"
-              className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                isActiveTab('/')
-                  ? 'text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {t('Link.home')}
-            </Link>
-            {Array.isArray(props.data) && props.data.length > 0 &&
-              props.data.map((album: AlbumType) => (
-                <Link
-                  key={album.id}
-                  href={album.album_value}
-                  className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                    isActiveTab(album.album_value)
-                      ? 'text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {album.name}
-                </Link>
-              ))
-            }
-          </div>
+          {showAlbumTabs && (
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide mx-4">
+              <Link
+                href="/"
+                className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  isActiveTab('/')
+                    ? 'text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('Link.home')}
+              </Link>
+              {Array.isArray(props.data) && props.data.length > 0 &&
+                props.data.map((album: AlbumType) => (
+                  <Link
+                    key={album.id}
+                    href={album.album_value}
+                    className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      isActiveTab(album.album_value)
+                        ? 'text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {album.name}
+                  </Link>
+                ))
+              }
+            </div>
+          )}
 
           {/* Right: Icon buttons */}
           <div className="flex items-center gap-1 shrink-0">

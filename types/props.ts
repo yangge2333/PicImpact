@@ -24,6 +24,7 @@ export type ImageHandleProps = {
   album: string
   totalHandle: (album: string, camera?: string, lens?: string) => Promise<number>
   configHandle?: () => Promise<GalleryDisplayConfig>
+  albums?: AlbumType[]
   // Variant CDN base resolved on the server (the same value `configHandle` will
   // return). Passed so the gallery has it on the very first client render,
   // before the client-side config SWR resolves — otherwise the grid briefly
