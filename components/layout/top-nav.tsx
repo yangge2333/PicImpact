@@ -49,12 +49,12 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-50 h-12">
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-b border-border/50" />
-        <nav className="relative flex h-12 items-center justify-between px-3 lg:px-4">
+        <div className="absolute inset-0 border-b border-white/10 bg-background/55 backdrop-blur-2xl dark:bg-black/25" />
+        <nav className="relative flex h-12 items-center justify-between px-4 lg:px-8">
           {/* Left: Site logo/name */}
           <Link
             href="/"
-            className="shrink-0 text-base font-semibold text-foreground hover:opacity-80 transition-opacity"
+            className="shrink-0 font-display text-base font-semibold tracking-normal text-foreground transition-opacity hover:opacity-70"
           >
             {props.title || 'PicImpact'}
           </Link>
@@ -63,9 +63,9 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide mx-4">
             <Link
               href="/"
-              className={`rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+              className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                 isActiveTab('/')
-                  ? 'bg-primary/10 text-foreground font-medium'
+                  ? 'text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -76,9 +76,9 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
                 <Link
                   key={album.id}
                   href={album.album_value}
-                  className={`rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     isActiveTab(album.album_value)
-                      ? 'bg-primary/10 text-foreground font-medium'
+                      ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -93,7 +93,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
             <button
               type="button"
               onClick={() => router.push('/map')}
-              className="inline-flex items-center justify-center rounded-md min-w-[44px] min-h-[44px] p-2 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('Link.map')}
             >
               <MapPin size={18} />
@@ -101,7 +101,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
             <button
               type="button"
               onClick={() => setCommand(true)}
-              className="inline-flex items-center justify-center rounded-md min-w-[44px] min-h-[44px] p-2 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('Command.placeholder')}
             >
               <Search size={18} />
@@ -114,7 +114,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
                 }
                 setTheme(resolvedTheme === 'light' ? 'dark' : 'light')
               }}
-              className="inline-flex items-center justify-center rounded-md min-w-[44px] min-h-[44px] p-2 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={themeToggleLabel}
               disabled={!isHydrated}
             >

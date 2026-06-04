@@ -62,7 +62,7 @@ export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', pr
     <div
       role="link"
       tabIndex={0}
-      className="group relative cursor-pointer overflow-hidden rounded-sm [will-change:auto] hover:[will-change:transform]"
+      className="group relative cursor-pointer overflow-hidden bg-stone-100 [will-change:auto] hover:[will-change:transform] dark:bg-white/5"
       style={sizeStyle}
       onClick={() => router.push(`/preview/${photo.id}`)}
       onKeyDown={(e: React.KeyboardEvent) => {
@@ -80,7 +80,7 @@ export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', pr
               ? 'animate-none bg-black/10 backdrop-blur-[2px] dark:bg-white/10'
               // Neutral muted tone (not the near-white bg-accent) so a cell still
               // loading during fast scroll reads as a placeholder, not a white gap.
-              : 'bg-muted'
+              : 'bg-stone-200 dark:bg-white/10'
           )}
         />
       )}
@@ -89,7 +89,7 @@ export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', pr
           {...imageProps}
           key={variantReady ? 'variant' : 'preview'}
           className={cn(
-            'object-cover transition-transform duration-500 group-hover:scale-105',
+            'object-cover transition duration-700 ease-[var(--ease-out-quart)] group-hover:scale-[1.025] group-hover:brightness-[0.82]',
             isLoading && !hasRealBlurhash && 'animate-pulse'
           )}
           alt={photo.detail || photo.title || ''}
@@ -120,37 +120,37 @@ export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', pr
           style={{ backgroundImage: `url(${dataURL})` }}
         />
       ) : (
-        <Skeleton className="absolute inset-0 rounded-none bg-accent/80" />
+        <Skeleton className="absolute inset-0 rounded-none bg-stone-200/80 dark:bg-white/10" />
       )}
       {/* Hover gradient overlay */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/58 via-black/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       {/* Hover content */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 text-white">
-        <h3 className="truncate text-sm font-medium opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 text-white">
+        <h3 className="truncate font-display text-xl font-medium tracking-normal opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 translate-y-2">
           {photo.title}
         </h3>
         {hasExif && (
-          <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.16em] opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 translate-y-2">
             {exif.focal_length && (
-              <div className="flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 backdrop-blur-md">
+              <div className="flex items-center gap-1 border border-white/25 bg-white/10 px-2.5 py-1.5 backdrop-blur-md">
                 <Focus className="h-3 w-3 text-white/70" />
                 <span className="text-white/90">{exif.focal_length}</span>
               </div>
             )}
             {exif.f_number && (
-              <div className="flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 backdrop-blur-md">
+              <div className="flex items-center gap-1 border border-white/25 bg-white/10 px-2.5 py-1.5 backdrop-blur-md">
                 <Aperture className="h-3 w-3 text-white/70" />
                 <span className="text-white/90">{exif.f_number}</span>
               </div>
             )}
             {exif.exposure_time && (
-              <div className="flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 backdrop-blur-md">
+              <div className="flex items-center gap-1 border border-white/25 bg-white/10 px-2.5 py-1.5 backdrop-blur-md">
                 <Timer className="h-3 w-3 text-white/70" />
                 <span className="text-white/90">{exif.exposure_time}</span>
               </div>
             )}
             {exif.iso_speed_rating && (
-              <div className="flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 backdrop-blur-md">
+              <div className="flex items-center gap-1 border border-white/25 bg-white/10 px-2.5 py-1.5 backdrop-blur-md">
                 <Disc3 className="h-3 w-3 text-white/70" />
                 <span className="text-white/90">ISO {exif.iso_speed_rating}</span>
               </div>
@@ -160,7 +160,7 @@ export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', pr
       </div>
       {/* Live Photo badge */}
       {photo.type === 2 && (
-        <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-xs text-white backdrop-blur-sm">
+        <div className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs text-white backdrop-blur-sm">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-3.5 w-3.5"

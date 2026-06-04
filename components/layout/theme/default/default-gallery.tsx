@@ -1,6 +1,7 @@
 'use client'
 
 import type { ImageHandleProps } from '~/types/props.ts'
+import Image from 'next/image'
 import useSWRInfinite from 'swr/infinite'
 import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
@@ -58,17 +59,73 @@ function MasonrySkeletonGrid() {
   return (
     <div
       aria-hidden="true"
-      className="columns-2 gap-1 px-1 sm:columns-3 sm:px-2 lg:columns-4 xl:columns-5"
+      className="mx-auto columns-1 gap-4 px-5 sm:columns-2 sm:px-8 lg:columns-3 xl:columns-4 2xl:max-w-[1680px]"
     >
       {MASONRY_SKELETON_RATIOS.map((aspectRatio, index) => (
-        <div key={`${aspectRatio}-${index}`} className="mb-1 break-inside-avoid">
+        <div key={`${aspectRatio}-${index}`} className="mb-4 break-inside-avoid">
           <Skeleton
-            className="w-full rounded-sm bg-accent/80"
+            className="w-full rounded-none bg-stone-200/70 dark:bg-white/10"
             style={{ aspectRatio }}
           />
         </div>
       ))}
     </div>
+  )
+}
+
+function HeroImage({ photo, priority = false }: { photo?: ImageType, priority?: boolean }) {
+  const src = photo?.preview_url || photo?.url || ''
+  if (!src) {
+    return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
+  }
+  return (
+    <Image
+      src={src}
+      alt={photo?.detail || photo?.title || ''}
+      fill
+      priority={priority}
+      unoptimized
+      sizes="100vw"
+      className="object-cover"
+    />
+  )
+}
+
+function EditorialHero({ photos, title }: { photos: ImageType[], title?: string }) {
+  const primary = photos[0]
+  const secondary = photos[1]
+  const tertiary = photos[2]
+  return (
+    <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
+      <HeroImage photo={primary} priority />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,8,0.72),rgba(12,10,8,0.28)_46%,rgba(12,10,8,0.08))]" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
+      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-6 pb-16 pt-20 sm:px-10 lg:px-16 lg:pb-20">
+        <div className="max-w-3xl">
+          <p className="mb-5 text-xs font-medium uppercase tracking-[0.32em] text-white/70">
+            Curated Photography
+          </p>
+          <h1 className="font-display text-5xl font-semibold leading-[0.98] tracking-normal text-white sm:text-6xl lg:text-7xl">
+            {title || primary?.album_name || 'PicImpact'}
+          </h1>
+          <p className="mt-6 max-w-xl text-base leading-7 text-white/76 sm:text-lg">
+            {primary?.detail || primary?.title || 'A quiet collection of light, place, and memory.'}
+          </p>
+        </div>
+      </div>
+      {(secondary || tertiary) && (
+        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[31vw] max-w-[520px] grid-cols-2 gap-3 lg:grid">
+          {[secondary, tertiary].filter(Boolean).map((photo, index) => (
+            <div
+              key={photo!.id}
+              className={index === 0 ? 'relative aspect-[4/5] translate-y-10 overflow-hidden shadow-2xl' : 'relative aspect-[4/5] overflow-hidden shadow-2xl'}
+            >
+              <HeroImage photo={photo} />
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -123,6 +180,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
 
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
+  const heroPhotos = useMemo(() => dataList.slice(0, 3), [dataList])
   const showInitialSkeleton = dataList.length === 0 && isValidating
   const isPaginating = isValidating && dataList.length > 0
   const columnCount = useResponsiveColumnCount()
@@ -180,8 +238,31 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
 
   return (
     <>
+      {heroPhotos.length > 0 && (
+        <EditorialHero
+          photos={heroPhotos}
+          title={configData?.customTitle}
+        />
+      )}
+      <section className="bg-background px-5 py-10 sm:px-8 lg:px-12">
+        <div className="mx-auto flex max-w-[1680px] items-end justify-between gap-6 border-b border-foreground/10 pb-8">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
+              Portfolio
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-semibold tracking-normal text-foreground sm:text-4xl">
+              Selected Stories
+            </h2>
+          </div>
+          {dataList.length > 0 && (
+            <p className="hidden max-w-xs text-right text-sm leading-6 text-muted-foreground sm:block">
+              {dataList.length} photographs
+            </p>
+          )}
+        </div>
+      </section>
       <InfiniteScroll
-        className="w-full space-y-2"
+        className="w-full space-y-8 bg-background pb-16"
         hasMore={size < (pageTotal ?? 0)}
         isLoading={isPaginating}
         next={() => setSize(size + 1)}
@@ -190,16 +271,16 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
           <MasonrySkeletonGrid />
         ) : (
           <VirtualMasonry
-            className="px-1 sm:px-2"
+            className="mx-auto px-5 sm:px-8 lg:px-12 2xl:max-w-[1680px]"
             items={dataList}
             render={RenderItem}
-            columnGutter={4}
-            columnCount={columnCount}
+            columnGutter={18}
+            columnCount={Math.max(1, columnCount - 1)}
             overscanBy={5}
           />
         )}
         {dataList.length === 0 && !isValidating && (
-          <div className="flex items-center justify-center my-4">
+          <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
             {t('Tips.noImg')}
           </div>
         )}
