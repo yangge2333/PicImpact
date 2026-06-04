@@ -8,7 +8,7 @@ import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
 import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
@@ -101,209 +101,6 @@ function HeroImage({
   )
 }
 
-function getHeroTextureSource(photo?: ImageType, variantBaseUrl = '', useAvif = false) {
-  if (!photo) {
-    return ''
-  }
-  if (hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)) {
-    return makeVariantLoader({
-      base: variantBaseUrl,
-      imageKey: photo.image_key,
-      readyMaxWidth: photo.ready_max_width,
-      format: useAvif ? 'avif' : 'webp',
-    })({ src: photo.image_key, width: Math.min(photo.ready_max_width || 1920, 1920), quality: 80 })
-  }
-  return photo.preview_url || ''
-}
-
-function LiquidDisplacementLayer({
-  from,
-  to,
-  trigger,
-}: {
-  from: string
-  to: string
-  trigger: number
-}) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || !from || !to) {
-      return
-    }
-    const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: false })
-    if (!gl) {
-      return
-    }
-
-    let frame = 0
-    let cancelled = false
-    const vertexSource = `
-      attribute vec2 a_position;
-      varying vec2 v_uv;
-      void main() {
-        v_uv = (a_position + 1.0) * 0.5;
-        gl_Position = vec4(a_position, 0.0, 1.0);
-      }
-    `
-    const fragmentSource = `
-      precision mediump float;
-      varying vec2 v_uv;
-      uniform sampler2D u_from;
-      uniform sampler2D u_to;
-      uniform float u_progress;
-      uniform float u_time;
-      uniform float u_canvas_ratio;
-      uniform float u_from_ratio;
-      uniform float u_to_ratio;
-
-      float wave(vec2 uv, float scale, float speed) {
-        return sin((uv.y * scale + u_time * speed)) * 0.5 + sin((uv.x * scale * 0.72 - u_time * speed * 0.8)) * 0.5;
-      }
-
-      vec2 coverUv(vec2 uv, float imageRatio) {
-        vec2 scale = imageRatio > u_canvas_ratio
-          ? vec2(u_canvas_ratio / imageRatio, 1.0)
-          : vec2(1.0, imageRatio / u_canvas_ratio);
-        return (uv - 0.5) * scale + 0.5;
-      }
-
-      void main() {
-        float p = smoothstep(0.0, 1.0, u_progress);
-        float force = sin(p * 3.14159265);
-        vec2 direction = vec2(0.045, -0.028) * force;
-        float w = wave(v_uv, 18.0, 0.004) + wave(v_uv + 0.21, 31.0, 0.006);
-        vec2 pull = direction * w;
-        vec2 uvFrom = coverUv(v_uv + pull + vec2((1.0 - p) * force * 0.026, 0.0), u_from_ratio);
-        vec2 uvTo = coverUv(v_uv - pull + vec2(-p * force * 0.026, 0.0), u_to_ratio);
-        vec4 a = texture2D(u_from, uvFrom);
-        vec4 b = texture2D(u_to, uvTo);
-        vec4 color = mix(a, b, p);
-        color.rgb += force * 0.035;
-        color.a = 1.0 - smoothstep(0.92, 1.0, p);
-        gl_FragColor = color;
-      }
-    `
-
-    const compile = (type: number, source: string) => {
-      const shader = gl.createShader(type)
-      if (!shader) return null
-      gl.shaderSource(shader, source)
-      gl.compileShader(shader)
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        gl.deleteShader(shader)
-        return null
-      }
-      return shader
-    }
-
-    const vertexShader = compile(gl.VERTEX_SHADER, vertexSource)
-    const fragmentShader = compile(gl.FRAGMENT_SHADER, fragmentSource)
-    if (!vertexShader || !fragmentShader) {
-      return
-    }
-    const program = gl.createProgram()
-    if (!program) {
-      return
-    }
-    gl.attachShader(program, vertexShader)
-    gl.attachShader(program, fragmentShader)
-    gl.linkProgram(program)
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      return
-    }
-
-    const loadTexture = (src: string, unit: number) => new Promise<{ texture: WebGLTexture, ratio: number } | null>((resolve) => {
-      const image = new window.Image()
-      image.crossOrigin = 'anonymous'
-      image.onload = () => {
-        const texture = gl.createTexture()
-        gl.activeTexture(gl.TEXTURE0 + unit)
-        gl.bindTexture(gl.TEXTURE_2D, texture)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-        try {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-          if (texture) {
-            resolve({ texture, ratio: image.naturalWidth / image.naturalHeight })
-          } else {
-            resolve(null)
-          }
-        } catch {
-          resolve(null)
-        }
-      }
-      image.onerror = () => resolve(null)
-      image.src = src
-    })
-
-    const resize = () => {
-      const ratio = window.devicePixelRatio || 1
-      const width = Math.max(1, Math.floor(canvas.clientWidth * ratio))
-      const height = Math.max(1, Math.floor(canvas.clientHeight * ratio))
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width
-        canvas.height = height
-      }
-      gl.viewport(0, 0, canvas.width, canvas.height)
-    }
-
-    Promise.all([loadTexture(from, 0), loadTexture(to, 1)]).then(([fromImage, toImage]) => {
-      if (cancelled || !fromImage || !toImage) {
-        return
-      }
-      resize()
-      const buffer = gl.createBuffer()
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW)
-      const position = gl.getAttribLocation(program, 'a_position')
-      const progress = gl.getUniformLocation(program, 'u_progress')
-      const time = gl.getUniformLocation(program, 'u_time')
-      const canvasRatio = gl.getUniformLocation(program, 'u_canvas_ratio')
-      const fromRatio = gl.getUniformLocation(program, 'u_from_ratio')
-      const toRatio = gl.getUniformLocation(program, 'u_to_ratio')
-      gl.useProgram(program)
-      gl.enableVertexAttribArray(position)
-      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0)
-      gl.uniform1i(gl.getUniformLocation(program, 'u_from'), 0)
-      gl.uniform1i(gl.getUniformLocation(program, 'u_to'), 1)
-      const started = performance.now()
-      const render = (now: number) => {
-        if (cancelled) return
-        resize()
-        const elapsed = now - started
-        const p = Math.min(1, elapsed / 1450)
-        gl.clearColor(0, 0, 0, 0)
-        gl.clear(gl.COLOR_BUFFER_BIT)
-        gl.uniform1f(progress, p)
-        gl.uniform1f(time, elapsed)
-        gl.uniform1f(canvasRatio, canvas.width / canvas.height)
-        gl.uniform1f(fromRatio, fromImage.ratio)
-        gl.uniform1f(toRatio, toImage.ratio)
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
-        if (p < 1) {
-          frame = requestAnimationFrame(render)
-        }
-      }
-      frame = requestAnimationFrame(render)
-    })
-
-    return () => {
-      cancelled = true
-      if (frame) cancelAnimationFrame(frame)
-    }
-  }, [from, to, trigger])
-
-  if (!from || !to) {
-    return null
-  }
-
-  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-[1] h-full w-full" aria-hidden="true" />
-}
-
 function EditorialHero({
   photos,
   title,
@@ -316,14 +113,9 @@ function EditorialHero({
   variantBaseUrl?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [previousPhoto, setPreviousPhoto] = useState<ImageType | undefined>()
-  const previousIndexRef = useRef(0)
-  const avifOk = useAvifSupport()
   const safePhotos = photos.length > 0 ? photos : []
   const primary = safePhotos[activeIndex % safePhotos.length]
-  const queuedPhotos = safePhotos.length > 1
-    ? Array.from({ length: Math.min(5, safePhotos.length - 1) }, (_, index) => safePhotos[(activeIndex + index + 1) % safePhotos.length])
-    : []
+  const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, 6))
   const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
   const channelAlbums = [
     { name: '正片', fallbackDetail: '精选成片作品集' },
@@ -336,44 +128,42 @@ function EditorialHero({
       detail: album?.detail || fallbackDetail,
     }
   })
-  const previousTexture = getHeroTextureSource(previousPhoto, variantBaseUrl, avifOk)
-  const currentTexture = getHeroTextureSource(primary, variantBaseUrl, avifOk)
-
-  useEffect(() => {
-    if (safePhotos.length <= 1) {
-      return
-    }
-    const timer = window.setInterval(() => {
-      setActiveIndex((index) => {
-        setPreviousPhoto(safePhotos[index % safePhotos.length])
-        previousIndexRef.current = index
-        return (index + 1) % safePhotos.length
-      })
-    }, 5000)
-    return () => window.clearInterval(timer)
-  }, [safePhotos.length])
-
   const handleSelectSlide = (index: number) => {
     if (index === activeIndex) {
       return
     }
-    setPreviousPhoto(safePhotos[activeIndex])
-    previousIndexRef.current = activeIndex
     setActiveIndex(index)
   }
 
   return (
     <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
-      {primary && (
-        <div key={primary.id} className="absolute inset-0 hero-image-reveal">
-          <HeroImage photo={primary} priority variantBaseUrl={variantBaseUrl} />
-        </div>
-      )}
-      <LiquidDisplacementLayer
-        from={previousTexture}
-        to={currentTexture}
-        trigger={activeIndex}
-      />
+      <div className="absolute inset-0 flex bg-black">
+        {accordionPhotos.map((photo, index) => {
+          const isActive = index === activeIndex
+          return (
+            <button
+              key={photo.id}
+              type="button"
+              aria-label={`Show image ${index + 1}`}
+              className={`group relative h-full min-w-0 appearance-none overflow-hidden border-0 border-r border-white/10 p-0 text-left transition-[flex] duration-700 ease-[var(--ease-out-expo)] last:border-r-0 ${
+                isActive ? 'flex-[5.8]' : 'flex-[0.72] hover:flex-[1.15]'
+              }`}
+              onMouseEnter={() => handleSelectSlide(index)}
+              onFocus={() => handleSelectSlide(index)}
+            >
+              <HeroImage photo={photo} priority={index === 0} variantBaseUrl={variantBaseUrl} />
+              <span className={`absolute inset-0 transition-colors duration-700 ${
+                isActive ? 'bg-black/0' : 'bg-black/34 group-hover:bg-black/14'
+              }`} />
+              <span className={`absolute bottom-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold uppercase text-white/72 transition-opacity duration-500 xl:block ${
+                isActive ? 'opacity-0' : 'opacity-80'
+              }`}>
+                {photo.album_name || photo.title || `0${index + 1}`}
+              </span>
+            </button>
+          )
+        })}
+      </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
       <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-12 pt-20 sm:px-10 md:pb-14 lg:px-16 lg:pb-16">
         <div className="relative w-full max-w-[min(46rem,calc(100vw-2.5rem))] overflow-hidden border border-white/10 bg-black/22 px-4 py-4 shadow-[0_20px_76px_rgba(0,0,0,0.2)] backdrop-blur-[2px] sm:px-5 sm:py-4">
@@ -405,26 +195,13 @@ function EditorialHero({
           </div>
         </div>
       </div>
-      {queuedPhotos.length > 0 && (
-        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[38vw] max-w-[620px] grid-cols-5 items-end gap-2 xl:grid">
-          {queuedPhotos.map((photo, index) => (
-            <div
-              key={`${photo!.id}-${activeIndex}-${index}`}
-              className="relative aspect-[4/5] overflow-hidden border border-white/14 shadow-2xl hero-card-in"
-              style={{ transform: `translateY(${index % 2 === 0 ? 24 : 0}px)`, animationDelay: `${index * 70}ms` }}
-            >
-              <HeroImage photo={photo} variantBaseUrl={variantBaseUrl} />
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="absolute bottom-6 left-6 z-10 flex gap-2 sm:left-auto sm:right-16">
-        {safePhotos.slice(0, Math.min(safePhotos.length, 6)).map((photo, index) => (
+      <div className="absolute bottom-6 right-6 z-10 hidden gap-2 md:flex">
+        {accordionPhotos.map((photo, index) => (
           <button
             key={photo.id}
             type="button"
             aria-label={`Show featured image ${index + 1}`}
-            className={`h-1.5 w-8 bg-white/40 transition-all duration-500 ${index === activeIndex ? 'w-14 bg-white' : 'hover:bg-white/70'}`}
+            className={`h-1.5 w-7 bg-white/38 transition-all duration-500 ${index === activeIndex ? 'w-12 bg-white' : 'hover:bg-white/70'}`}
             onClick={() => handleSelectSlide(index)}
           />
         ))}
