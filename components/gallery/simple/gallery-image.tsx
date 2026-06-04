@@ -43,7 +43,7 @@ export default function GalleryImage({
         }),
       }
     : previewSrc
-      ? { src: previewSrc, overrideSrc: previewSrc, unoptimized: true }
+      ? { src: previewSrc }
       : null
   const blurhashOnly = !imageProps && hasRealBlurhash
 

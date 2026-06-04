@@ -21,6 +21,8 @@ import { useAvifSupport } from '~/hooks/use-avif-support'
 // AVIFs (~5KB), so a few eager fetches cost almost nothing.
 const LCP_EAGER_COUNT = 5
 const HERO_PHOTO_COUNT = 5
+const HERO_ACTIVE_IMAGE_SIZES = '(max-width: 768px) 100vw, 55vw'
+const HERO_RAIL_IMAGE_SIZES = '(max-width: 768px) 100vw, 12vw'
 
 const MASONRY_SKELETON_RATIOS = [
   '4 / 5',
@@ -62,10 +64,12 @@ function HeroImage({
   photo,
   priority = false,
   variantBaseUrl = '',
+  sizes = HERO_ACTIVE_IMAGE_SIZES,
 }: {
   photo?: ImageType
   priority?: boolean
   variantBaseUrl?: string
+  sizes?: string
 }) {
   const avifOk = useAvifSupport()
   if (!photo) {
@@ -83,7 +87,7 @@ function HeroImage({
         }),
       }
     : photo.preview_url
-      ? { src: photo.preview_url, unoptimized: true }
+      ? { src: photo.preview_url }
       : null
 
   if (!imageProps) {
@@ -96,7 +100,7 @@ function HeroImage({
       alt={photo?.detail || photo?.title || ''}
       fill
       priority={priority}
-      sizes="100vw"
+      sizes={sizes}
       className="object-cover"
     />
   )
@@ -162,7 +166,12 @@ function EditorialHero({
               onClick={() => handleSelectSlide(index)}
               onFocus={() => handleSelectSlide(index)}
             >
-              <HeroImage photo={photo} priority={index === 0} variantBaseUrl={variantBaseUrl} />
+              <HeroImage
+                photo={photo}
+                priority={index === 0}
+                variantBaseUrl={variantBaseUrl}
+                sizes={isActive ? HERO_ACTIVE_IMAGE_SIZES : HERO_RAIL_IMAGE_SIZES}
+              />
               <span className={`absolute inset-0 transition-colors duration-700 ${
                 isActive ? 'bg-black/0' : 'bg-black/34 group-hover:bg-black/14'
               }`} />

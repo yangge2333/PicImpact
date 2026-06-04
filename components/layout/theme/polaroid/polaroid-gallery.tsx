@@ -54,7 +54,7 @@ const PolaroidCard = memo(function PolaroidCard({
         }),
       }
     : previewSrc
-      ? { src: previewSrc, unoptimized: true }
+      ? { src: previewSrc }
       : null
 
   // 如果缺少宽高数据，则跳过渲染以规避报错

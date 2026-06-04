@@ -41,7 +41,7 @@ export default function MasonryPhotoItem({
   // Image source ladder — the grid must NEVER load the full-resolution original
   // (the multi-MB photos that tank scrolling). In order:
   //   1. responsive variants via the custom CDN loader (bypasses /_next/image),
-  //   2. the small preview thumbnail (unoptimized — it is already sized),
+  //   2. the preview image resized by next/image to the rendered grid width,
   //   3. nothing → the blurhash placeholder stays as the final visible state.
   const variantReady = !variantFailed && hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)
   const previewSrc = photo.preview_url || ''
@@ -56,7 +56,7 @@ export default function MasonryPhotoItem({
         }),
       }
     : previewSrc
-      ? { src: previewSrc, unoptimized: true }
+      ? { src: previewSrc }
       : null
   // No servable image (un-backfilled row without a preview, e.g. OpenList) →
   // show the decoded blurhash itself instead of a perpetual loading skeleton.
