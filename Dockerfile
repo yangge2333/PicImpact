@@ -59,7 +59,7 @@ COPY --from=builder /app/public ./public
 COPY ./prisma ./prisma
 COPY ./script.sh ./script.sh
 
-RUN chmod +x script.sh
+RUN sed -i 's/\r$//' script.sh && chmod +x script.sh
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
