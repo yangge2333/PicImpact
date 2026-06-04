@@ -105,7 +105,7 @@ export default function Command() {
             <CommandItem className="justify-end">
               <a
                 className="text-xs text-muted-foreground flex items-center gap-0.25"
-                href="https://github.com/besscroft/PicImpact"
+                href="https://github.com/yangge2333/PicImpact"
                 target="_blank"
                 rel="noreferrer"
               >

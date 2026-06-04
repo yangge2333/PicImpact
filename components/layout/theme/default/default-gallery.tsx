@@ -2,7 +2,6 @@
 
 import type { ImageHandleProps } from '~/types/props.ts'
 import Image from 'next/image'
-import Link from 'next/link'
 import useSWRInfinite from 'swr/infinite'
 import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
@@ -109,12 +108,10 @@ function HeroImage({
 function EditorialHero({
   photos,
   title,
-  albums = [],
   variantBaseUrl = '',
 }: {
   photos: ImageType[]
   title?: string
-  albums?: NonNullable<ImageHandleProps['albums']>
   variantBaseUrl?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -122,17 +119,7 @@ function EditorialHero({
   const primary = safePhotos[activeIndex % safePhotos.length]
   const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, HERO_PHOTO_COUNT))
   const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
-  const channelAlbums = [
-    { name: '正片', fallbackDetail: '精选成片作品集' },
-    { name: '旅拍', fallbackDetail: '旅途与目的地影像' },
-  ].map(({ name, fallbackDetail }) => {
-    const album = albums.find((item) => item.name === name || item.album_value.includes(name))
-    return {
-      name,
-      href: album?.album_value || `/${name}`,
-      detail: album?.detail || fallbackDetail,
-    }
-  })
+  const channelLabels = ['正片', '场照', '旅拍']
   const handleSelectSlide = (index: number) => {
     if (index === activeIndex) {
       return
@@ -193,24 +180,22 @@ function EditorialHero({
           <h1 className="whitespace-nowrap font-display text-[clamp(2.35rem,3.85vw,3.95rem)] font-semibold leading-none tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)]">
             {featuredTitle}
           </h1>
-          <p className="mt-4 max-w-md text-xs leading-6 text-white/72 sm:text-sm">
+          <p className="mt-4 whitespace-nowrap text-xs leading-6 text-white/72 sm:text-sm">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <div className="mt-5 grid w-full max-w-[23rem] grid-cols-2 gap-2">
-            {channelAlbums.map((album) => (
-              <Link
-                key={album.name}
-                href={album.href}
-                className="group relative overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl transition duration-500 hover:border-white/58 hover:bg-white/12 sm:px-4 sm:py-3.5"
+          <p className="mt-2 text-xs leading-5 text-white/68 sm:text-sm">
+            联系方式 QQ: 774202796 WX: 13634085297
+          </p>
+          <div className="mt-5 grid w-full max-w-[25rem] grid-cols-3 gap-2">
+            {channelLabels.map((label) => (
+              <div
+                key={label}
+                className="relative overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl sm:px-4 sm:py-3.5"
               >
-                <span className="absolute inset-x-3 bottom-0 h-px origin-left scale-x-0 bg-white transition-transform duration-500 group-hover:scale-x-100" />
-                <span className="block font-display text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold leading-none tracking-normal">
-                  {album.name}
+                <span className="block font-display text-[clamp(1.25rem,2vw,1.75rem)] font-semibold leading-none tracking-normal">
+                  {label}
                 </span>
-                <span className="mt-2 block text-[10px] leading-4 text-white/58 transition-colors group-hover:text-white/84">
-                  {album.detail}
-                </span>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
@@ -286,7 +271,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
         <EditorialHero
           photos={heroPhotos}
           title={configData?.customTitle}
-          albums={props.albums}
           variantBaseUrl={variantBaseUrl}
         />
       )}
