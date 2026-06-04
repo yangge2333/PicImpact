@@ -236,12 +236,6 @@
     }
   }
 
-  .hero-fragment-tile {
-    background-repeat: no-repeat;
-    animation: heroFragment 1.25s var(--ease-out-expo) both;
-    will-change: transform, opacity, filter;
-  }
-
   @keyframes heroImageReveal {
     0% {
       filter: blur(10px) saturate(1.08);
@@ -253,26 +247,6 @@
       filter: blur(0) saturate(1);
       opacity: 1;
       transform: scale(1);
-    }
-  }
-
-  @keyframes heroFragment {
-    0% {
-      opacity: 1;
-      filter: blur(0);
-      transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-    }
-
-    42% {
-      opacity: 0.86;
-      filter: blur(1px);
-      transform: translate3d(10px, 12px, 0) scale(0.985) rotate(0.35deg);
-    }
-
-    100% {
-      opacity: 0;
-      filter: blur(9px);
-      transform: translate3d(var(--fragment-x, 58px), var(--fragment-y, 72px), 0) scale(0.74) rotate(1.2deg);
     }
   }
 

@@ -8,7 +8,6 @@ import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
 import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
-import type { CSSProperties } from 'react'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
@@ -102,8 +101,207 @@ function HeroImage({
   )
 }
 
-function getPreviewSource(photo?: ImageType) {
-  return photo?.preview_url || ''
+function getHeroTextureSource(photo?: ImageType, variantBaseUrl = '', useAvif = false) {
+  if (!photo) {
+    return ''
+  }
+  if (hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)) {
+    return makeVariantLoader({
+      base: variantBaseUrl,
+      imageKey: photo.image_key,
+      readyMaxWidth: photo.ready_max_width,
+      format: useAvif ? 'avif' : 'webp',
+    })({ src: photo.image_key, width: Math.min(photo.ready_max_width || 1920, 1920), quality: 80 })
+  }
+  return photo.preview_url || ''
+}
+
+function LiquidDisplacementLayer({
+  from,
+  to,
+  trigger,
+}: {
+  from: string
+  to: string
+  trigger: number
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !from || !to) {
+      return
+    }
+    const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: false })
+    if (!gl) {
+      return
+    }
+
+    let frame = 0
+    let cancelled = false
+    const vertexSource = `
+      attribute vec2 a_position;
+      varying vec2 v_uv;
+      void main() {
+        v_uv = (a_position + 1.0) * 0.5;
+        gl_Position = vec4(a_position, 0.0, 1.0);
+      }
+    `
+    const fragmentSource = `
+      precision mediump float;
+      varying vec2 v_uv;
+      uniform sampler2D u_from;
+      uniform sampler2D u_to;
+      uniform float u_progress;
+      uniform float u_time;
+      uniform float u_canvas_ratio;
+      uniform float u_from_ratio;
+      uniform float u_to_ratio;
+
+      float wave(vec2 uv, float scale, float speed) {
+        return sin((uv.y * scale + u_time * speed)) * 0.5 + sin((uv.x * scale * 0.72 - u_time * speed * 0.8)) * 0.5;
+      }
+
+      vec2 coverUv(vec2 uv, float imageRatio) {
+        vec2 scale = imageRatio > u_canvas_ratio
+          ? vec2(u_canvas_ratio / imageRatio, 1.0)
+          : vec2(1.0, imageRatio / u_canvas_ratio);
+        return (uv - 0.5) * scale + 0.5;
+      }
+
+      void main() {
+        float p = smoothstep(0.0, 1.0, u_progress);
+        float force = sin(p * 3.14159265);
+        vec2 direction = vec2(0.045, -0.028) * force;
+        float w = wave(v_uv, 18.0, 0.004) + wave(v_uv + 0.21, 31.0, 0.006);
+        vec2 pull = direction * w;
+        vec2 uvFrom = coverUv(v_uv + pull + vec2((1.0 - p) * force * 0.026, 0.0), u_from_ratio);
+        vec2 uvTo = coverUv(v_uv - pull + vec2(-p * force * 0.026, 0.0), u_to_ratio);
+        vec4 a = texture2D(u_from, uvFrom);
+        vec4 b = texture2D(u_to, uvTo);
+        vec4 color = mix(a, b, p);
+        color.rgb += force * 0.035;
+        color.a = 1.0 - smoothstep(0.92, 1.0, p);
+        gl_FragColor = color;
+      }
+    `
+
+    const compile = (type: number, source: string) => {
+      const shader = gl.createShader(type)
+      if (!shader) return null
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        gl.deleteShader(shader)
+        return null
+      }
+      return shader
+    }
+
+    const vertexShader = compile(gl.VERTEX_SHADER, vertexSource)
+    const fragmentShader = compile(gl.FRAGMENT_SHADER, fragmentSource)
+    if (!vertexShader || !fragmentShader) {
+      return
+    }
+    const program = gl.createProgram()
+    if (!program) {
+      return
+    }
+    gl.attachShader(program, vertexShader)
+    gl.attachShader(program, fragmentShader)
+    gl.linkProgram(program)
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      return
+    }
+
+    const loadTexture = (src: string, unit: number) => new Promise<{ texture: WebGLTexture, ratio: number } | null>((resolve) => {
+      const image = new window.Image()
+      image.crossOrigin = 'anonymous'
+      image.onload = () => {
+        const texture = gl.createTexture()
+        gl.activeTexture(gl.TEXTURE0 + unit)
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+        try {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+          if (texture) {
+            resolve({ texture, ratio: image.naturalWidth / image.naturalHeight })
+          } else {
+            resolve(null)
+          }
+        } catch {
+          resolve(null)
+        }
+      }
+      image.onerror = () => resolve(null)
+      image.src = src
+    })
+
+    const resize = () => {
+      const ratio = window.devicePixelRatio || 1
+      const width = Math.max(1, Math.floor(canvas.clientWidth * ratio))
+      const height = Math.max(1, Math.floor(canvas.clientHeight * ratio))
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width
+        canvas.height = height
+      }
+      gl.viewport(0, 0, canvas.width, canvas.height)
+    }
+
+    Promise.all([loadTexture(from, 0), loadTexture(to, 1)]).then(([fromImage, toImage]) => {
+      if (cancelled || !fromImage || !toImage) {
+        return
+      }
+      resize()
+      const buffer = gl.createBuffer()
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW)
+      const position = gl.getAttribLocation(program, 'a_position')
+      const progress = gl.getUniformLocation(program, 'u_progress')
+      const time = gl.getUniformLocation(program, 'u_time')
+      const canvasRatio = gl.getUniformLocation(program, 'u_canvas_ratio')
+      const fromRatio = gl.getUniformLocation(program, 'u_from_ratio')
+      const toRatio = gl.getUniformLocation(program, 'u_to_ratio')
+      gl.useProgram(program)
+      gl.enableVertexAttribArray(position)
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0)
+      gl.uniform1i(gl.getUniformLocation(program, 'u_from'), 0)
+      gl.uniform1i(gl.getUniformLocation(program, 'u_to'), 1)
+      const started = performance.now()
+      const render = (now: number) => {
+        if (cancelled) return
+        resize()
+        const elapsed = now - started
+        const p = Math.min(1, elapsed / 1450)
+        gl.clearColor(0, 0, 0, 0)
+        gl.clear(gl.COLOR_BUFFER_BIT)
+        gl.uniform1f(progress, p)
+        gl.uniform1f(time, elapsed)
+        gl.uniform1f(canvasRatio, canvas.width / canvas.height)
+        gl.uniform1f(fromRatio, fromImage.ratio)
+        gl.uniform1f(toRatio, toImage.ratio)
+        gl.drawArrays(gl.TRIANGLES, 0, 6)
+        if (p < 1) {
+          frame = requestAnimationFrame(render)
+        }
+      }
+      frame = requestAnimationFrame(render)
+    })
+
+    return () => {
+      cancelled = true
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [from, to, trigger])
+
+  if (!from || !to) {
+    return null
+  }
+
+  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-[1] h-full w-full" aria-hidden="true" />
 }
 
 function EditorialHero({
@@ -120,6 +318,7 @@ function EditorialHero({
   const [activeIndex, setActiveIndex] = useState(0)
   const [previousPhoto, setPreviousPhoto] = useState<ImageType | undefined>()
   const previousIndexRef = useRef(0)
+  const avifOk = useAvifSupport()
   const safePhotos = photos.length > 0 ? photos : []
   const primary = safePhotos[activeIndex % safePhotos.length]
   const queuedPhotos = safePhotos.length > 1
@@ -137,8 +336,8 @@ function EditorialHero({
       detail: album?.detail || fallbackDetail,
     }
   })
-  const fragmentSource = getPreviewSource(previousPhoto)
-  const fragmentTiles = useMemo(() => Array.from({ length: 48 }, (_, index) => index), [])
+  const previousTexture = getHeroTextureSource(previousPhoto, variantBaseUrl, avifOk)
+  const currentTexture = getHeroTextureSource(primary, variantBaseUrl, avifOk)
 
   useEffect(() => {
     if (safePhotos.length <= 1) {
@@ -170,46 +369,24 @@ function EditorialHero({
           <HeroImage photo={primary} priority variantBaseUrl={variantBaseUrl} />
         </div>
       )}
-      {fragmentSource && previousPhoto && (
-        <div
-          key={`${previousPhoto.id}-${activeIndex}-${previousIndexRef.current}`}
-          className="pointer-events-none absolute inset-0 z-[1] grid grid-cols-8 grid-rows-6"
-          aria-hidden="true"
-        >
-          {fragmentTiles.map((index) => {
-            const col = index % 8
-            const row = Math.floor(index / 8)
-            return (
-              <span
-                key={index}
-                className="hero-fragment-tile"
-                style={{
-                  backgroundImage: `url(${fragmentSource})`,
-                  backgroundPosition: `${(col / 7) * 100}% ${(row / 5) * 100}%`,
-                  backgroundSize: '800% 600%',
-                  '--fragment-x': `${(col - 3.5) * 18 + 48}px`,
-                  '--fragment-y': `${(row - 2.5) * 18 + 62}px`,
-                  animationDelay: `${(col + row) * 24}ms`,
-                } as CSSProperties}
-              />
-            )
-          })}
-        </div>
-      )}
-      <div className="absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(7,7,7,0.86),rgba(7,7,7,0.58)_34%,rgba(7,7,7,0.12)_68%,rgba(7,7,7,0.02)),linear-gradient(0deg,rgba(7,7,7,0.34),rgba(7,7,7,0)_44%),radial-gradient(circle_at_78%_68%,rgba(255,255,255,0.12),transparent_31%)]" />
-      <div className="absolute inset-x-0 bottom-0 z-[3] h-44 bg-gradient-to-t from-background via-background/72 to-transparent" />
+      <LiquidDisplacementLayer
+        from={previousTexture}
+        to={currentTexture}
+        trigger={activeIndex}
+      />
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
       <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-14 pt-20 sm:px-10 md:pb-16 lg:px-16 lg:pb-20">
-        <div className="w-full max-w-[min(49rem,calc(100vw-2.5rem))]">
+        <div className="relative w-full max-w-[min(42rem,calc(100vw-2.5rem))] overflow-hidden border border-white/10 bg-black/24 px-5 py-5 shadow-[0_24px_90px_rgba(0,0,0,0.22)] backdrop-blur-[2px] sm:px-7 sm:py-6">
           <p className="mb-4 text-[11px] font-semibold uppercase text-white/66">
             Featured Gallery
           </p>
-          <h1 className="font-display text-[clamp(3.25rem,7vw,7.25rem)] font-semibold leading-[0.98] tracking-normal text-white drop-shadow-[0_8px_34px_rgba(0,0,0,0.38)]">
+          <h1 className="font-display text-[clamp(2.7rem,5.4vw,5.6rem)] font-semibold leading-[1.02] tracking-normal text-white drop-shadow-[0_8px_34px_rgba(0,0,0,0.34)]">
             {featuredTitle}
           </h1>
           <p className="mt-5 max-w-lg text-sm leading-7 text-white/76 sm:text-base">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <div className="mt-8 grid w-full max-w-[31rem] grid-cols-2 gap-2 sm:gap-3">
+          <div className="mt-7 grid w-full max-w-[27rem] grid-cols-2 gap-2">
             {channelAlbums.map((album) => (
               <Link
                 key={album.name}
