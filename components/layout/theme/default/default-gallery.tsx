@@ -22,7 +22,7 @@ import { useAvifSupport } from '~/hooks/use-avif-support'
 const LCP_EAGER_COUNT = 5
 const HERO_PHOTO_COUNT = 5
 const HERO_ROTATION_INTERVAL_MS = 3500
-const HERO_IMAGE_SIZES = '(max-width: 768px) 100vw, 1440px'
+const HERO_IMAGE_SIZES = '(max-width: 768px) 100vw, 1920px'
 
 const MASONRY_SKELETON_RATIOS = [
   '4 / 5',
