@@ -8,11 +8,13 @@ import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
 import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
-import { useState, useCallback, useEffect, useRef, useMemo, useTransition } from 'react'
+import type { CSSProperties } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
-import FloatingFilterBall from '~/components/album/floating-filter-ball.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
+import { hasReadyVariants, makeVariantLoader } from '~/lib/image/loader'
+import { useAvifSupport } from '~/hooks/use-avif-support'
 
 // How many leading items load eagerly (priority) rather than lazily. Sized to
 // the widest column count (xl = 5) so the first visible row is always eager,
@@ -56,104 +58,185 @@ function MasonrySkeletonGrid() {
   )
 }
 
-function HeroImage({ photo, priority = false }: { photo?: ImageType, priority?: boolean }) {
-  const src = photo?.preview_url || photo?.url || ''
-  if (!src) {
+function HeroImage({
+  photo,
+  priority = false,
+  variantBaseUrl = '',
+}: {
+  photo?: ImageType
+  priority?: boolean
+  variantBaseUrl?: string
+}) {
+  const avifOk = useAvifSupport()
+  if (!photo) {
     return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
   }
+  const variantReady = hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)
+  const imageProps = variantReady
+    ? {
+        src: photo.image_key,
+        loader: makeVariantLoader({
+          base: variantBaseUrl,
+          imageKey: photo.image_key,
+          readyMaxWidth: photo.ready_max_width,
+          format: (avifOk ? 'avif' : 'webp') as 'avif' | 'webp',
+        }),
+      }
+    : photo.preview_url
+      ? { src: photo.preview_url, unoptimized: true }
+      : null
+
+  if (!imageProps) {
+    return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
+  }
+
   return (
     <Image
-      src={src}
+      {...imageProps}
       alt={photo?.detail || photo?.title || ''}
       fill
       priority={priority}
-      unoptimized
       sizes="100vw"
       className="object-cover"
     />
   )
 }
 
+function getPreviewSource(photo?: ImageType) {
+  return photo?.preview_url || ''
+}
+
 function EditorialHero({
   photos,
   title,
   albums = [],
+  variantBaseUrl = '',
 }: {
   photos: ImageType[]
   title?: string
   albums?: NonNullable<ImageHandleProps['albums']>
+  variantBaseUrl?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [previousPhoto, setPreviousPhoto] = useState<ImageType | undefined>()
+  const previousIndexRef = useRef(0)
   const safePhotos = photos.length > 0 ? photos : []
   const primary = safePhotos[activeIndex % safePhotos.length]
-  const secondary = safePhotos[(activeIndex + 1) % safePhotos.length]
-  const tertiary = safePhotos[(activeIndex + 2) % safePhotos.length]
+  const queuedPhotos = safePhotos.length > 1
+    ? Array.from({ length: Math.min(5, safePhotos.length - 1) }, (_, index) => safePhotos[(activeIndex + index + 1) % safePhotos.length])
+    : []
   const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
-  const channelAlbums = ['正片', '旅拍'].map((name) => {
+  const channelAlbums = [
+    { name: '正片', fallbackDetail: '精选成片作品集' },
+    { name: '旅拍', fallbackDetail: '旅途与目的地影像' },
+  ].map(({ name, fallbackDetail }) => {
     const album = albums.find((item) => item.name === name || item.album_value.includes(name))
     return {
       name,
       href: album?.album_value || `/${name}`,
-      detail: album?.detail,
+      detail: album?.detail || fallbackDetail,
     }
   })
+  const fragmentSource = getPreviewSource(previousPhoto)
+  const fragmentTiles = useMemo(() => Array.from({ length: 48 }, (_, index) => index), [])
 
   useEffect(() => {
     if (safePhotos.length <= 1) {
       return
     }
     const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % safePhotos.length)
-    }, 2000)
+      setActiveIndex((index) => {
+        setPreviousPhoto(safePhotos[index % safePhotos.length])
+        previousIndexRef.current = index
+        return (index + 1) % safePhotos.length
+      })
+    }, 5000)
     return () => window.clearInterval(timer)
   }, [safePhotos.length])
+
+  const handleSelectSlide = (index: number) => {
+    if (index === activeIndex) {
+      return
+    }
+    setPreviousPhoto(safePhotos[activeIndex])
+    previousIndexRef.current = activeIndex
+    setActiveIndex(index)
+  }
 
   return (
     <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
       {primary && (
-        <div key={primary.id} className="absolute inset-0 hero-slide-in">
-          <HeroImage photo={primary} priority />
+        <div key={primary.id} className="absolute inset-0 hero-image-reveal">
+          <HeroImage photo={primary} priority variantBaseUrl={variantBaseUrl} />
         </div>
       )}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_64%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(90deg,rgba(13,12,11,0.76),rgba(13,12,11,0.22)_48%,rgba(13,12,11,0.08))]" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-6 pb-14 pt-20 sm:px-10 lg:px-16 lg:pb-20">
-        <div className="max-w-4xl">
+      {fragmentSource && previousPhoto && (
+        <div
+          key={`${previousPhoto.id}-${activeIndex}-${previousIndexRef.current}`}
+          className="pointer-events-none absolute inset-0 z-[1] grid grid-cols-8 grid-rows-6"
+          aria-hidden="true"
+        >
+          {fragmentTiles.map((index) => {
+            const col = index % 8
+            const row = Math.floor(index / 8)
+            return (
+              <span
+                key={index}
+                className="hero-fragment-tile"
+                style={{
+                  backgroundImage: `url(${fragmentSource})`,
+                  backgroundPosition: `${(col / 7) * 100}% ${(row / 5) * 100}%`,
+                  backgroundSize: '800% 600%',
+                  '--fragment-x': `${(col - 3.5) * 18 + 48}px`,
+                  '--fragment-y': `${(row - 2.5) * 18 + 62}px`,
+                  animationDelay: `${(col + row) * 24}ms`,
+                } as CSSProperties}
+              />
+            )
+          })}
+        </div>
+      )}
+      <div className="absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(8,8,8,0.78),rgba(8,8,8,0.38)_43%,rgba(8,8,8,0.06)),radial-gradient(circle_at_78%_68%,rgba(255,255,255,0.14),transparent_31%)]" />
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-40 bg-gradient-to-t from-background to-transparent" />
+      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-14 pt-20 sm:px-10 lg:px-16 lg:pb-20">
+        <div className="w-full max-w-[min(58rem,calc(100vw-2.5rem))]">
           <p className="mb-5 text-xs font-medium uppercase text-white/70">
             Featured Gallery
           </p>
-          <h1 className="font-display text-6xl font-semibold leading-[0.95] tracking-normal text-white sm:text-7xl lg:text-8xl">
+          <h1 className="font-display text-[clamp(3.75rem,8vw,8rem)] font-semibold leading-[0.95] tracking-normal text-white">
             {featuredTitle}
           </h1>
           <p className="mt-6 max-w-xl text-base leading-7 text-white/78 sm:text-lg">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <div className="mt-10 grid max-w-xl grid-cols-2 gap-3 sm:flex sm:max-w-none sm:gap-4">
+          <div className="mt-10 grid w-full max-w-xl grid-cols-2 gap-px border border-white/28 bg-white/28 sm:max-w-2xl">
             {channelAlbums.map((album) => (
               <Link
                 key={album.name}
                 href={album.href}
-                className="group border border-white/35 bg-white/10 px-6 py-4 text-left text-white backdrop-blur-xl transition duration-500 hover:border-white/75 hover:bg-white/18"
+                className="group relative overflow-hidden bg-black/18 px-5 py-5 text-left text-white backdrop-blur-xl transition duration-500 hover:bg-white/16 sm:px-7 sm:py-6"
               >
-                <span className="block font-display text-3xl font-semibold leading-none tracking-normal sm:text-4xl">
+                <span className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-white transition-transform duration-500 group-hover:scale-x-100" />
+                <span className="block font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-none tracking-normal">
                   {album.name}
                 </span>
                 <span className="mt-3 block text-xs leading-5 text-white/68 transition-colors group-hover:text-white/86">
-                  {album.detail || (album.name === '正片' ? '精选成片作品集' : '旅途与目的地影像')}
+                  {album.detail}
                 </span>
               </Link>
             ))}
           </div>
         </div>
       </div>
-      {safePhotos.length > 1 && (
-        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[31vw] max-w-[560px] grid-cols-2 gap-3 lg:grid">
-          {[secondary, tertiary].filter(Boolean).map((photo, index) => (
+      {queuedPhotos.length > 0 && (
+        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[42vw] max-w-[760px] grid-cols-5 items-end gap-3 lg:grid">
+          {queuedPhotos.map((photo, index) => (
             <div
               key={`${photo!.id}-${activeIndex}-${index}`}
-              className={index === 0 ? 'relative aspect-[4/5] translate-y-10 overflow-hidden shadow-2xl hero-card-in' : 'relative aspect-[4/5] overflow-hidden shadow-2xl hero-card-in-delayed'}
+              className="relative aspect-[4/5] overflow-hidden shadow-2xl hero-card-in"
+              style={{ transform: `translateY(${index % 2 === 0 ? 32 : 0}px)`, animationDelay: `${index * 70}ms` }}
             >
-              <HeroImage photo={photo} />
+              <HeroImage photo={photo} variantBaseUrl={variantBaseUrl} />
             </div>
           ))}
         </div>
@@ -165,7 +248,7 @@ function EditorialHero({
             type="button"
             aria-label={`Show featured image ${index + 1}`}
             className={`h-1.5 w-8 bg-white/40 transition-all duration-500 ${index === activeIndex ? 'w-14 bg-white' : 'hover:bg-white/70'}`}
-            onClick={() => setActiveIndex(index)}
+            onClick={() => handleSelectSlide(index)}
           />
         ))}
       </div>
@@ -174,19 +257,13 @@ function EditorialHero({
 }
 
 export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
-  const [selectedCamera, setSelectedCamera] = useState('')
-  const [selectedLens, setSelectedLens] = useState('')
-  // Debounced filter values for API requests
-  const [debouncedCamera, setDebouncedCamera] = useState('')
-  const [debouncedLens, setDebouncedLens] = useState('')
-  const [, startTransition] = useTransition()
   // Use SWR Infinite for paginated data with filter support - use debounced values
   const { data, isValidating, size, setSize } = useSWRInfinite(
     (index) => {
-      return [`client-${props.args}-${index}-${props.album}-${debouncedCamera}-${debouncedLens}`, index]
+      return [`client-${props.args}-${index}-${props.album}`, index]
     },
     ([, index]) => {
-      return props.handle(index + 1, props.album, debouncedCamera || undefined, debouncedLens || undefined)
+      return props.handle(index + 1, props.album)
     },
     {
       revalidateOnFocus: false,
@@ -198,8 +275,8 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
 
   // Use SWR for page total with filter support - use debounced values
   const { data: pageTotal } = useSWR(
-    [`pageTotal-${props.args}-${props.album}`, debouncedCamera, debouncedLens],
-    () => props.totalHandle(props.album, debouncedCamera || undefined, debouncedLens || undefined),
+    [`pageTotal-${props.args}-${props.album}`],
+    () => props.totalHandle(props.album),
     {
       revalidateOnFocus: false,
       revalidateIfStale: false,
@@ -229,44 +306,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
   const isPaginating = isValidating && dataList.length > 0
   const t = useTranslations()
 
-  // Reset pagination when debounced filters change - SWR key change will auto-refetch
-  const prevFiltersRef = useRef({ camera: '', lens: '' })
-
-  // Debounce filter changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      startTransition(() => {
-        setDebouncedCamera(selectedCamera)
-        setDebouncedLens(selectedLens)
-      })
-    }, 150)
-    return () => clearTimeout(timer)
-  }, [selectedCamera, selectedLens])
-
-  useEffect(() => {
-    const prev = prevFiltersRef.current
-    if (prev.camera !== debouncedCamera || prev.lens !== debouncedLens) {
-      prevFiltersRef.current = { camera: debouncedCamera, lens: debouncedLens }
-      // Only reset size, SWR will auto-refetch due to key change
-      if (size > 1) {
-        setSize(1)
-      }
-    }
-  }, [debouncedCamera, debouncedLens, size, setSize])
-
-  const handleCameraChange = useCallback((camera: string) => {
-    setSelectedCamera(camera)
-  }, [])
-
-  const handleLensChange = useCallback((lens: string) => {
-    setSelectedLens(lens)
-  }, [])
-
-  const handleReset = useCallback(() => {
-    setSelectedCamera('')
-    setSelectedLens('')
-  }, [])
-
   return (
     <>
       {heroPhotos.length > 0 && (
@@ -274,6 +313,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
           photos={heroPhotos}
           title={configData?.customTitle}
           albums={props.albums}
+          variantBaseUrl={variantBaseUrl}
         />
       )}
       <section className="bg-background px-5 py-10 sm:px-8 lg:px-12">
@@ -331,15 +371,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
           </div>
         )}
       </InfiniteScroll>
-      {/* Floating Filter Ball */}
-      <FloatingFilterBall
-        album={props.album}
-        selectedCamera={selectedCamera}
-        selectedLens={selectedLens}
-        onCameraChange={handleCameraChange}
-        onLensChange={handleLensChange}
-        onReset={handleReset}
-      />
     </>
   )
 }
