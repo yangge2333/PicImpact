@@ -20,6 +20,7 @@ import { useAvifSupport } from '~/hooks/use-avif-support'
 // which lets the LCP image start downloading immediately. Variants are tiny
 // AVIFs (~5KB), so a few eager fetches cost almost nothing.
 const LCP_EAGER_COUNT = 5
+const HERO_PHOTO_COUNT = 5
 
 const MASONRY_SKELETON_RATIOS = [
   '4 / 5',
@@ -115,7 +116,7 @@ function EditorialHero({
   const [activeIndex, setActiveIndex] = useState(0)
   const safePhotos = photos.length > 0 ? photos : []
   const primary = safePhotos[activeIndex % safePhotos.length]
-  const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, 6))
+  const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, HERO_PHOTO_COUNT))
   const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
   const channelAlbums = [
     { name: '正片', fallbackDetail: '精选成片作品集' },
@@ -265,7 +266,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
 
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
-  const heroPhotos = useMemo(() => dataList.slice(0, 6), [dataList])
+  const heroPhotos = useMemo(() => dataList.slice(0, HERO_PHOTO_COUNT), [dataList])
   const showInitialSkeleton = dataList.length === 0 && isValidating
   const isPaginating = isValidating && dataList.length > 0
   const t = useTranslations()
