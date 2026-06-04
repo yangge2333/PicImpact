@@ -9,7 +9,6 @@ import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
 import { useState, useCallback, useEffect, useRef, useMemo, useTransition } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
-import VirtualMasonry from '~/components/gallery/virtual-masonry.tsx'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import FloatingFilterBall from '~/components/album/floating-filter-ball.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
@@ -19,26 +18,6 @@ import { Skeleton } from '~/components/ui/skeleton'
 // which lets the LCP image start downloading immediately. Variants are tiny
 // AVIFs (~5KB), so a few eager fetches cost almost nothing.
 const LCP_EAGER_COUNT = 5
-
-// Responsive column count matching the previous Tailwind breakpoints
-// (columns-2 / sm:columns-3 / lg:columns-4 / xl:columns-5).
-function useResponsiveColumnCount(): number {
-  const [count, setCount] = useState(2)
-  useEffect(() => {
-    const compute = () => {
-      const w = window.innerWidth
-      if (w >= 1280) return 5
-      if (w >= 1024) return 4
-      if (w >= 640) return 3
-      return 2
-    }
-    const update = () => setCount(compute())
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [])
-  return count
-}
 
 const MASONRY_SKELETON_RATIOS = [
   '4 / 5',
@@ -59,10 +38,13 @@ function MasonrySkeletonGrid() {
   return (
     <div
       aria-hidden="true"
-      className="mx-auto columns-1 gap-4 px-5 sm:columns-2 sm:px-8 lg:columns-3 xl:columns-4 2xl:max-w-[1680px]"
+      className="mx-auto flex w-full flex-col gap-12 px-4 sm:px-8 lg:px-12"
     >
       {MASONRY_SKELETON_RATIOS.map((aspectRatio, index) => (
-        <div key={`${aspectRatio}-${index}`} className="mb-4 break-inside-avoid">
+        <div
+          key={`${aspectRatio}-${index}`}
+          className="mx-auto w-full max-w-[min(1760px,calc(100vw-2rem))]"
+        >
           <Skeleton
             className="w-full rounded-none bg-stone-200/70 dark:bg-white/10"
             style={{ aspectRatio }}
@@ -183,20 +165,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
   const heroPhotos = useMemo(() => dataList.slice(0, 3), [dataList])
   const showInitialSkeleton = dataList.length === 0 && isValidating
   const isPaginating = isValidating && dataList.length > 0
-  const columnCount = useResponsiveColumnCount()
   const t = useTranslations()
-
-  // masonic render adapter: receives the column width and item data, renders the
-  // shared photo item sized to that column. Memoized on `variantBaseUrl` so
-  // masonic keeps a stable render-component identity (avoids remounting items).
-  const RenderItem = useMemo(() => {
-    return function RenderItem({ index, data, width }: { index: number, data: ImageType, width: number }) {
-      // Eager-load the first row(s) so the LCP image is fetched at high priority
-      // instead of waiting on the lazy IntersectionObserver. Covers up to the
-      // widest column count (5) so the first visible row is always eager.
-      return <MasonryPhotoItem photo={data} width={width} variantBaseUrl={variantBaseUrl} priority={index < LCP_EAGER_COUNT} />
-    }
-  }, [variantBaseUrl])
 
   // Reset pagination when debounced filters change - SWR key change will auto-refetch
   const prevFiltersRef = useRef({ camera: '', lens: '' })
@@ -270,14 +239,28 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
         {showInitialSkeleton ? (
           <MasonrySkeletonGrid />
         ) : (
-          <VirtualMasonry
-            className="mx-auto px-5 sm:px-8 lg:px-12 2xl:max-w-[1680px]"
-            items={dataList}
-            render={RenderItem}
-            columnGutter={18}
-            columnCount={Math.max(1, columnCount - 1)}
-            overscanBy={5}
-          />
+          <div className="flex w-full flex-col gap-16 sm:gap-20">
+            {dataList.map((photo, index) => {
+              const aspectRatio = photo.width > 0 && photo.height > 0 ? photo.width / photo.height : 1
+              const isLandscape = aspectRatio >= 1.18
+              const isPortrait = aspectRatio < 0.86
+              const frameClassName = isLandscape
+                ? 'mx-auto w-[calc(100vw-2rem)] max-w-[1880px] sm:w-[calc(100vw-4rem)] lg:w-[calc(100vw-6rem)]'
+                : isPortrait
+                  ? 'mx-auto w-[min(78vw,760px)] sm:w-[min(58vw,760px)]'
+                  : 'mx-auto w-[min(88vw,1040px)]'
+
+              return (
+                <MasonryPhotoItem
+                  key={photo.id}
+                  photo={photo}
+                  variantBaseUrl={variantBaseUrl}
+                  priority={index < LCP_EAGER_COUNT}
+                  className={frameClassName}
+                />
+              )
+            })}
+          </div>
         )}
         {dataList.length === 0 && !isValidating && (
           <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">

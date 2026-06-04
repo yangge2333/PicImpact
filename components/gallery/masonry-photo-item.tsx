@@ -12,7 +12,19 @@ import { hasReadyVariants, makeVariantLoader } from '~/lib/image/loader'
 import { useAvifSupport } from '~/hooks/use-avif-support'
 import { DEFAULT_GRID_SIZES } from '~/lib/image/grid-image-sizes'
 
-export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', priority = false }: { photo: ImageType, width?: number, variantBaseUrl?: string, priority?: boolean }) {
+export default function MasonryPhotoItem({
+  photo,
+  width,
+  variantBaseUrl = '',
+  priority = false,
+  className,
+}: {
+  photo: ImageType
+  width?: number
+  variantBaseUrl?: string
+  priority?: boolean
+  className?: string
+}) {
   const router = useRouter()
   const dataURL = useBlurImageDataUrl(photo.blurhash)
   const avifOk = useAvifSupport()
@@ -62,7 +74,10 @@ export default function MasonryPhotoItem({ photo, width, variantBaseUrl = '', pr
     <div
       role="link"
       tabIndex={0}
-      className="group relative cursor-pointer overflow-hidden bg-stone-100 [will-change:auto] hover:[will-change:transform] dark:bg-white/5"
+      className={cn(
+        'group relative cursor-pointer overflow-hidden bg-stone-100 [will-change:auto] hover:[will-change:transform] dark:bg-white/5',
+        className
+      )}
       style={sizeStyle}
       onClick={() => router.push(`/preview/${photo.id}`)}
       onKeyDown={(e: React.KeyboardEvent) => {
