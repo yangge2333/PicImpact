@@ -196,31 +196,31 @@ function EditorialHero({
           })}
         </div>
       )}
-      <div className="absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(8,8,8,0.78),rgba(8,8,8,0.38)_43%,rgba(8,8,8,0.06)),radial-gradient(circle_at_78%_68%,rgba(255,255,255,0.14),transparent_31%)]" />
-      <div className="absolute inset-x-0 bottom-0 z-[3] h-40 bg-gradient-to-t from-background to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-14 pt-20 sm:px-10 lg:px-16 lg:pb-20">
-        <div className="w-full max-w-[min(58rem,calc(100vw-2.5rem))]">
-          <p className="mb-5 text-xs font-medium uppercase text-white/70">
+      <div className="absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(7,7,7,0.86),rgba(7,7,7,0.58)_34%,rgba(7,7,7,0.12)_68%,rgba(7,7,7,0.02)),linear-gradient(0deg,rgba(7,7,7,0.34),rgba(7,7,7,0)_44%),radial-gradient(circle_at_78%_68%,rgba(255,255,255,0.12),transparent_31%)]" />
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-44 bg-gradient-to-t from-background via-background/72 to-transparent" />
+      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-14 pt-20 sm:px-10 md:pb-16 lg:px-16 lg:pb-20">
+        <div className="w-full max-w-[min(49rem,calc(100vw-2.5rem))]">
+          <p className="mb-4 text-[11px] font-semibold uppercase text-white/66">
             Featured Gallery
           </p>
-          <h1 className="font-display text-[clamp(3.75rem,8vw,8rem)] font-semibold leading-[0.95] tracking-normal text-white">
+          <h1 className="font-display text-[clamp(3.25rem,7vw,7.25rem)] font-semibold leading-[0.98] tracking-normal text-white drop-shadow-[0_8px_34px_rgba(0,0,0,0.38)]">
             {featuredTitle}
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-white/78 sm:text-lg">
+          <p className="mt-5 max-w-lg text-sm leading-7 text-white/76 sm:text-base">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <div className="mt-10 grid w-full max-w-xl grid-cols-2 gap-px border border-white/28 bg-white/28 sm:max-w-2xl">
+          <div className="mt-8 grid w-full max-w-[31rem] grid-cols-2 gap-2 sm:gap-3">
             {channelAlbums.map((album) => (
               <Link
                 key={album.name}
                 href={album.href}
-                className="group relative overflow-hidden bg-black/18 px-5 py-5 text-left text-white backdrop-blur-xl transition duration-500 hover:bg-white/16 sm:px-7 sm:py-6"
+                className="group relative overflow-hidden border border-white/24 bg-black/18 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-500 hover:border-white/62 hover:bg-white/12 sm:px-6 sm:py-5"
               >
-                <span className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-white transition-transform duration-500 group-hover:scale-x-100" />
-                <span className="block font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-none tracking-normal">
+                <span className="absolute inset-x-4 bottom-0 h-px origin-left scale-x-0 bg-white transition-transform duration-500 group-hover:scale-x-100" />
+                <span className="block font-display text-[clamp(1.8rem,3vw,2.7rem)] font-semibold leading-none tracking-normal">
                   {album.name}
                 </span>
-                <span className="mt-3 block text-xs leading-5 text-white/68 transition-colors group-hover:text-white/86">
+                <span className="mt-2.5 block text-[11px] leading-5 text-white/62 transition-colors group-hover:text-white/86">
                   {album.detail}
                 </span>
               </Link>
@@ -229,12 +229,12 @@ function EditorialHero({
         </div>
       </div>
       {queuedPhotos.length > 0 && (
-        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[42vw] max-w-[760px] grid-cols-5 items-end gap-3 lg:grid">
+        <div className="pointer-events-none absolute bottom-12 right-8 z-10 hidden w-[38vw] max-w-[620px] grid-cols-5 items-end gap-2 xl:grid">
           {queuedPhotos.map((photo, index) => (
             <div
               key={`${photo!.id}-${activeIndex}-${index}`}
-              className="relative aspect-[4/5] overflow-hidden shadow-2xl hero-card-in"
-              style={{ transform: `translateY(${index % 2 === 0 ? 32 : 0}px)`, animationDelay: `${index * 70}ms` }}
+              className="relative aspect-[4/5] overflow-hidden border border-white/14 shadow-2xl hero-card-in"
+              style={{ transform: `translateY(${index % 2 === 0 ? 24 : 0}px)`, animationDelay: `${index * 70}ms` }}
             >
               <HeroImage photo={photo} variantBaseUrl={variantBaseUrl} />
             </div>
@@ -301,7 +301,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
 
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
-  const heroPhotos = useMemo(() => dataList.slice(0, 3), [dataList])
+  const heroPhotos = useMemo(() => dataList.slice(0, 6), [dataList])
   const showInitialSkeleton = dataList.length === 0 && isValidating
   const isPaginating = isValidating && dataList.length > 0
   const t = useTranslations()
