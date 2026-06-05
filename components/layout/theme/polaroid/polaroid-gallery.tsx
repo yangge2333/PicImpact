@@ -10,69 +10,38 @@ import Image from 'next/image'
 import { Skeleton } from '~/components/ui/skeleton'
 import { useBlurImageDataUrl } from '~/hooks/use-blurhash'
 import { cn } from '~/lib/utils'
-import { hasReadyVariants, makeVariantLoader } from '~/lib/image/loader'
-import { useAvifSupport } from '~/hooks/use-avif-support'
 import { POLAROID_GRID_SIZES } from '~/lib/image/grid-image-sizes'
 
-/**
- * 拍立得照片卡片组件
- * @param props - 包含图片数据、位置样式和点击处理函数
- */
+const POLAROID_STYLES = [
+  { cardW: 54, cardH: 86, imgW: 46, imgH: 62 },
+  { cardW: 108, cardH: 86, imgW: 99, imgH: 62 },
+  { cardW: 72, cardH: 86, imgW: 62, imgH: 62 },
+  { cardW: 53.9, cardH: 66.6, imgW: 47, imgH: 46 },
+  { cardW: 103, cardH: 102, imgW: 92, imgH: 73 },
+  { cardW: 88.5, cardH: 107.5, imgW: 78.9, imgH: 76.8 },
+]
+
 const PolaroidCard = memo(function PolaroidCard({
   item,
   style,
   onMouseDown,
   zIndex,
-  variantBaseUrl = '',
   priority = false,
 }: {
   item: ImageType
   style: React.CSSProperties
   onMouseDown: (id: string) => void
   zIndex: number
-  variantBaseUrl?: string
   priority?: boolean
 }) {
   const [isLoading, setIsLoading] = useState(true)
   const blurDataUrl = useBlurImageDataUrl(item.blurhash)
-  const avifOk = useAvifSupport()
-  const [variantFailed, setVariantFailed] = useState(false)
-
-  // Image source ladder (same policy as the other themes): responsive variant
-  // via the CDN loader → preview thumbnail → blurhash. NEVER the full original
-  // (removes the prior onError → item.url 20MB fallback).
-  const variantReady = !variantFailed && hasReadyVariants(item.image_key, item.ready_max_width, variantBaseUrl)
   const previewSrc = item.preview_url || ''
-  const imageProps = variantReady
-    ? {
-        src: item.image_key,
-        loader: makeVariantLoader({
-          base: variantBaseUrl,
-          imageKey: item.image_key,
-          readyMaxWidth: item.ready_max_width,
-          format: (avifOk ? 'avif' : 'webp') as 'avif' | 'webp',
-        }),
-      }
-    : previewSrc
-      ? { src: previewSrc }
-      : null
 
-  // 如果缺少宽高数据，则跳过渲染以规避报错
   if (!item.width || !item.height || item.width <= 0 || item.height <= 0) {
     return null
   }
 
-  // 定义 6 种相纸规格 (单位: mm)
-  const POLAROID_STYLES = [
-    { name: '富士MINI', cardW: 54, cardH: 86, imgW: 46, imgH: 62 },
-    { name: '富士WIDE', cardW: 108, cardH: 86, imgW: 99, imgH: 62 },
-    { name: '富士SQ', cardW: 72, cardH: 86, imgW: 62, imgH: 62 },
-    { name: '宝丽来GO', cardW: 53.9, cardH: 66.6, imgW: 47, imgH: 46 },
-    { name: '宝丽来宽幅', cardW: 103, cardH: 102, imgW: 92, imgH: 73 },
-    { name: '宝丽来标准', cardW: 88.5, cardH: 107.5, imgW: 78.9, imgH: 76.8 },
-  ]
-
-  // 根据图片比例自动选择最合适的相纸
   const selectedStyle = useMemo(() => {
     const imgRatio = item.width / item.height
     return POLAROID_STYLES.reduce((prev, curr) => {
@@ -82,14 +51,11 @@ const PolaroidCard = memo(function PolaroidCard({
     })
   }, [item.width, item.height])
 
-  // 物理尺寸转像素比例 (1mm = 3.8px)
   const scale = 3.8
   const cardWidth = selectedStyle.cardW * scale
   const cardHeight = selectedStyle.cardH * scale
   const imgWidth = selectedStyle.imgW * scale
   const imgHeight = selectedStyle.imgH * scale
-
-  // 计算边距 (通常左右居中，顶部边距等于侧边，剩余给底部)
   const paddingSide = (cardWidth - imgWidth) / 2
   const paddingTop = paddingSide
   const paddingBottom = cardHeight - imgHeight - paddingTop
@@ -97,25 +63,21 @@ const PolaroidCard = memo(function PolaroidCard({
   return (
     <DraggableCardBody
       className="absolute flex flex-col p-0 shadow-xl min-h-0 h-auto bg-white dark:bg-neutral-50 rounded-sm"
-      style={{ 
-        ...style, 
-        zIndex, 
-        width: `${cardWidth}px`, 
+      style={{
+        ...style,
+        zIndex,
+        width: `${cardWidth}px`,
         height: `${cardHeight}px`,
-        padding: `${paddingTop}px ${paddingSide}px ${paddingBottom}px ${paddingSide}px`
+        padding: `${paddingTop}px ${paddingSide}px ${paddingBottom}px ${paddingSide}px`,
       }}
       onMouseDown={() => onMouseDown(item.id)}
     >
-      <div 
-        className="relative overflow-hidden bg-muted shrink-0 w-full h-full shadow-inner"
-      >
-        {imageProps && isLoading && (
-          <Skeleton className="absolute inset-0 z-20 rounded-none" />
-        )}
-        {imageProps ? (
+      <div className="relative overflow-hidden bg-muted shrink-0 w-full h-full shadow-inner">
+        {previewSrc && isLoading && <Skeleton className="absolute inset-0 z-20 rounded-none" />}
+        {previewSrc ? (
           <Image
-            {...imageProps}
-            key={variantReady ? 'variant' : 'preview'}
+            src={previewSrc}
+            key="preview"
             alt={item.title}
             width={Math.round(imgWidth)}
             height={Math.round(imgHeight)}
@@ -126,16 +88,10 @@ const PolaroidCard = memo(function PolaroidCard({
             placeholder="blur"
             blurDataURL={blurDataUrl}
             onLoad={() => setIsLoading(false)}
-            onError={() => {
-              // A ready variant failed → step down to preview/blurhash, never the original.
-              if (variantReady) {
-                setVariantFailed(true)
-                return
-              }
-              setIsLoading(false)
-            }}
+            onError={() => setIsLoading(false)}
             sizes={POLAROID_GRID_SIZES}
             priority={priority}
+            unoptimized
           />
         ) : (
           <div
@@ -145,8 +101,7 @@ const PolaroidCard = memo(function PolaroidCard({
           />
         )}
       </div>
-      {/* 标题区域：绝对定位在底部留白处，不影响相纸尺寸 */}
-      <div 
+      <div
         className="absolute bottom-0 left-0 right-0 flex items-center justify-center px-2 overflow-hidden"
         style={{ height: `${paddingBottom}px` }}
       >
@@ -158,10 +113,6 @@ const PolaroidCard = memo(function PolaroidCard({
   )
 })
 
-/**
- * 拍立得画廊组件
- * @param props - 包含配置处理和图片加载处理
- */
 export default function PolaroidGallery(props: Readonly<ImageHandleProps>) {
   const emptyConfig: GalleryDisplayConfig = {
     customIndexDownloadEnable: false,
@@ -173,10 +124,6 @@ export default function PolaroidGallery(props: Readonly<ImageHandleProps>) {
   })
 
   const customTitle = configData?.customTitle
-  // Prefer the live config, but fall back to the server-passed base on the first
-  // render (before the config SWR resolves) so cards serve AVIF immediately
-  // instead of double-loading preview thumbnails.
-  const variantBaseUrl = configData?.variantBaseUrl ?? props.variantBaseUrl ?? ''
 
   const { data } = useSWRInfinite((index) => {
     return [`client-${props.args}-${index}-${props.album}`, index]
@@ -190,17 +137,15 @@ export default function PolaroidGallery(props: Readonly<ImageHandleProps>) {
   })
 
   const dataList = useMemo(() => data?.flat() ?? [], [data])
-
-  // 使用 ref 存储位置，确保数据追加时旧图片位置不变
   const positionsRef = useRef<Record<string, { top: string, left: string, rotate: string }>>({})
 
   const currentPositions = useMemo(() => {
     dataList.forEach((item: ImageType) => {
       if (!positionsRef.current[item.id]) {
         positionsRef.current[item.id] = {
-          top: `${Math.floor(Math.random() * 40) + 10}%`, // 10% - 50%
-          left: `${Math.floor(Math.random() * 50) + 10}%`, // 10% - 60%
-          rotate: `${Math.floor(Math.random() * 20) - 10}deg`, // -10deg - 10deg
+          top: `${Math.floor(Math.random() * 40) + 10}%`,
+          left: `${Math.floor(Math.random() * 50) + 10}%`,
+          rotate: `${Math.floor(Math.random() * 20) - 10}deg`,
         }
       }
     })
@@ -210,10 +155,6 @@ export default function PolaroidGallery(props: Readonly<ImageHandleProps>) {
   const maxZIndexRef = useRef(10)
   const [cardZIndices, setCardZIndices] = useState<Record<string, number>>({})
 
-  /**
-   * 处理卡片点击，将其置于最顶层
-   * @param id - 图片 ID
-   */
   const handleCardClick = useCallback((id: string) => {
     maxZIndexRef.current += 1
     const newZIndex = maxZIndexRef.current
@@ -226,7 +167,7 @@ export default function PolaroidGallery(props: Readonly<ImageHandleProps>) {
   return (
     <DraggableCardContainer className="relative flex min-h-screen w-full items-center justify-center overflow-clip">
       <p className="absolute top-1/2 mx-auto max-w-sm -translate-y-3/4 text-center text-2xl font-black text-muted-foreground md:text-4xl">
-        {customTitle || '瓦达西可不可爱'}
+        {customTitle || 'PicImpact'}
       </p>
       {dataList?.map((item: ImageType, index: number) => (
         <PolaroidCard
@@ -235,7 +176,6 @@ export default function PolaroidGallery(props: Readonly<ImageHandleProps>) {
           style={currentPositions[item.id]}
           zIndex={cardZIndices[item.id] || 1}
           onMouseDown={handleCardClick}
-          variantBaseUrl={variantBaseUrl}
           priority={index < 3}
         />
       ))}

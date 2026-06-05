@@ -18,9 +18,6 @@ model Images {
   preview_url          String?                @db.Text
   video_url            String?                @db.Text
   blurhash             String?                @db.Text
-  image_key            String?                @db.Text
-  variants_ready       Boolean                @default(false)
-  ready_max_width      Int                    @default(0)
   exif                 Json?                  @db.Json
   labels               Json?                  @db.Json
   width                Int                    @default(0)
@@ -38,7 +35,6 @@ model Images {
   del                  Int                    @default(0) @db.SmallInt
   imagesAlbumsRelation ImagesAlbumsRelation[]
 
-  @@index([variants_ready, del])
   @@map("images")
 }
 

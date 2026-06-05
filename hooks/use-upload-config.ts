@@ -37,8 +37,8 @@ export interface UploadConfig {
   albums: AlbumType[] | undefined
   isAlbumsLoading: boolean
   previewCompressQuality: number
-  previewImageMaxWidthLimitSwitchOn: boolean
-  previewImageMaxWidthLimit: number
+  previewImageShortSideLimitSwitchOn: boolean
+  previewImageShortSideLimit: number
   maxUploadFiles: number
   handleStorageChange: (value: string) => Promise<void>
   resetStorageState: () => void
@@ -58,9 +58,9 @@ export function useUploadConfig(): UploadConfig {
   const { data: albums, isLoading: isAlbumsLoading } = useSWR('/api/v1/albums', fetcher)
   const { data: configs } = useSWR<CustomInfo>('/api/v1/settings/custom-info', fetcher)
 
-  const previewImageMaxWidthLimitSwitchOn = configs?.previewMaxWidthLimitSwitch === true
-  const previewImageMaxWidthLimit = configs?.previewMaxWidthLimit ?? 0
-  const previewCompressQuality = configs?.previewQuality ?? 0.2
+  const previewImageShortSideLimitSwitchOn = configs?.previewMaxWidthLimitSwitch === true
+  const previewImageShortSideLimit = configs?.previewMaxWidthLimit ?? 2160
+  const previewCompressQuality = configs?.previewQuality ?? 0.8
   const maxUploadFiles = configs?.maxUploadFiles ?? 5
 
   const getOpenListStorage = useCallback(async () => {
@@ -120,13 +120,34 @@ export function useUploadConfig(): UploadConfig {
     return { res, processedFile }
   }, [storage, openListMountPath])
 
-  const compressPreviewImage = useCallback((file: File, type: string): Promise<string> => {
+  const readImageSize = useCallback((file: File): Promise<{ width: number, height: number }> => {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height })
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Image size detection failed'))
+      }
+      img.src = objectUrl
+    })
+  }, [])
+
+  const compressPreviewImage = useCallback(async (file: File, type: string): Promise<string> => {
+    const size = await readImageSize(file)
+    const shouldLimitShortSide = previewImageShortSideLimitSwitchOn && previewImageShortSideLimit > 0
+    const limitByWidth = shouldLimitShortSide && size.width <= size.height
+    const limitByHeight = shouldLimitShortSide && size.width > size.height
     return new Promise((resolve, reject) => {
       new Compressor(file, {
         quality: previewCompressQuality,
         checkOrientation: false,
         mimeType: 'image/webp',
-        maxWidth: previewImageMaxWidthLimitSwitchOn && previewImageMaxWidthLimit > 0 ? previewImageMaxWidthLimit : undefined,
+        maxWidth: limitByWidth ? previewImageShortSideLimit : undefined,
+        maxHeight: limitByHeight ? previewImageShortSideLimit : undefined,
         async success(compressedFile) {
           try {
             const res = await uploadFile(compressedFile, type, storage, openListMountPath)
@@ -144,7 +165,7 @@ export function useUploadConfig(): UploadConfig {
         },
       })
     })
-  }, [previewCompressQuality, previewImageMaxWidthLimitSwitchOn, previewImageMaxWidthLimit, storage, openListMountPath])
+  }, [readImageSize, previewCompressQuality, previewImageShortSideLimitSwitchOn, previewImageShortSideLimit, storage, openListMountPath])
 
   return {
     storage,
@@ -158,8 +179,8 @@ export function useUploadConfig(): UploadConfig {
     albums,
     isAlbumsLoading,
     previewCompressQuality,
-    previewImageMaxWidthLimitSwitchOn,
-    previewImageMaxWidthLimit,
+    previewImageShortSideLimitSwitchOn,
+    previewImageShortSideLimit,
     maxUploadFiles,
     handleStorageChange,
     resetStorageState,

@@ -267,7 +267,7 @@ function IssueDetailCard({
 /**
  * Render-prop arguments handed to a task's pluggable scope control. The control
  * owns the inputs that produce the task scope (album/show selectors for
- * metadata, a force toggle for preprocess) and reports changes back through
+ * metadata) and reports changes back through
  * `setScope`.
  */
 export type ScopeControlProps<Scope> = {
@@ -278,11 +278,11 @@ export type ScopeControlProps<Scope> = {
 
 /**
  * Per-task configuration consumed by {@link TaskRunPanel}. Everything that
- * differs between the metadata and preprocess tasks is funnelled through here so
+ * differs between task scopes is funnelled through here so
  * the panel body, SWR wiring, polling and handlers stay shared.
  */
 export type TaskRunPanelConfig<Scope> = {
-  basePath: '/api/v1/tasks' | '/api/v1/preprocess-tasks'
+  basePath: '/api/v1/tasks'
   taskKey: AdminTaskKey
   defaultScope: Scope
   /** Builds the preview-count query string (without leading `?`) from the scope. */

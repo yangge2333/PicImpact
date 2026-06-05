@@ -8,7 +8,6 @@ import type {
   OpenListInfo,
   R2Info,
   S3Info,
-  VariantStorageInfo,
 } from '~/types'
 import { normalizeDefaultTheme } from '~/lib/utils/theme'
 
@@ -67,9 +66,9 @@ export function toCustomInfo(configs: Config[]): CustomInfo {
     rssUserId: str(configs, 'rss_user_id'),
     customIndexStyle: str(configs, 'custom_index_style', '0'),
     customIndexDownloadEnable: bool(configs, 'custom_index_download_enable'),
-    previewMaxWidthLimit: int(configs, 'preview_max_width_limit', 0),
-    previewMaxWidthLimitSwitch: switchBool(configs, 'preview_max_width_limit_switch'),
-    previewQuality: float(configs, 'preview_quality', 0.2),
+    previewMaxWidthLimit: int(configs, 'preview_max_width_limit', 2160),
+    previewMaxWidthLimitSwitch: switchBool(configs, 'preview_max_width_limit_switch', true),
+    previewQuality: float(configs, 'preview_quality', 0.8),
     umamiHost: str(configs, 'umami_host'),
     umamiAnalytics: str(configs, 'umami_analytics'),
     maxUploadFiles: int(configs, 'max_upload_files', 5),
@@ -111,11 +110,6 @@ export function toOpenListInfo(configs: Config[]): OpenListInfo {
     openListUrl: str(configs, 'open_list_url'),
     openListToken: str(configs, 'open_list_token'),
   }
-}
-
-export function toVariantStorageInfo(configs: Config[]): VariantStorageInfo {
-  const value = str(configs, 'variant_storage')
-  return { variantStorage: value === 's3' || value === 'r2' ? value : '' }
 }
 
 export function toAdminConfig(configs: Config[]): AdminConfig {

@@ -1,5 +1,3 @@
-// 数据库表结构类型
-
 export type AlbumType = {
   id: string;
   name: string;
@@ -42,9 +40,6 @@ export type ImageType = {
   preview_url: string;
   video_url: string;
   blurhash: string;
-  image_key: string;
-  variants_ready: boolean;
-  ready_max_width: number;
   exif: ExifType;
   labels: any;
   width: number;
@@ -53,7 +48,7 @@ export type ImageType = {
   lat: string;
   album: string;
   detail: string;
-  type: number; // type: 图片类型为 1，livephoto 类型为 2
+  type: number;
   show: number;
   show_on_mainpage: number;
   sort: number;
@@ -62,26 +57,12 @@ export type ImageType = {
   album_license: string;
 }
 
-/**
- * @deprecated Use the dedicated config-shape types below (`CustomInfo`, `S3Info`,
- * `R2Info`, `OpenListInfo`, `AdminConfig`, `DailyConfig`). This raw row shape is
- * still consumed by the storage client builders (`getClient`, `getR2Client`) and
- * by parts of the server-side download/upload pipeline that read the
- * `Config[]` snapshot returned by `fetchConfigsByKeys`. The API contract for
- * `/api/v1/settings/*` and `/api/v1/daily/config` no longer exposes this shape.
- */
 export type Config = {
   id: string;
   config_key: string;
   config_value: string | null;
   detail: string | null;
 }
-
-// === API-facing configuration shapes (camelCase, flat) ===
-//
-// These types describe what `/api/v1/settings/*` and `/api/v1/daily/config`
-// return and accept on the wire. Snake_case DB column names are mapped at the
-// server boundary via `server/lib/config-transform.ts`.
 
 export type CustomInfo = {
   customTitle: string
@@ -115,14 +96,6 @@ export type S3Info = {
   s3DirectDownload: boolean
 }
 
-/**
- * Which storage backend the image preprocessing pipeline uploads variants to.
- * Empty string disables the pipeline (gallery falls back to preview/blurhash).
- */
-export type VariantStorageInfo = {
-  variantStorage: '' | 's3' | 'r2'
-}
-
 export type R2Info = {
   r2AccesskeyId: string
   r2AccesskeySecret: string
@@ -149,18 +122,8 @@ export type DailyConfig = {
   dailyLastRefresh: string | null
 }
 
-// Slim camelCase shape passed from server actions to gallery components via
-// `configHandle`. The fields are the subset of `CustomInfo` the public/album
-// pages actually need; populated by the server action that wraps
-// `fetchConfigsByKeys`.
 export type GalleryDisplayConfig = {
   customTitle?: string
   customIndexDownloadEnable: boolean
   customIndexOriginEnable: boolean
-  // Public root (no trailing slash, folder already included) for responsive
-  // image variants. Populated server-side from the configured variant storage
-  // backend. Empty/undefined → the gallery loader stays dormant and degrades to
-  // the preview thumbnail / blurhash placeholder (e.g. OpenList-backed images,
-  // or before the preprocessing backfill has run).
-  variantBaseUrl?: string
 }

@@ -200,6 +200,7 @@ export function MapView({ images }: MapViewProps) {
                     fill
                     className="object-cover"
                     sizes="40px"
+                    unoptimized
                   />
                 </div>
                 <div className="absolute -bottom-1 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-r-2 border-b-2 border-background bg-background"></div>
@@ -226,6 +227,7 @@ export function MapView({ images }: MapViewProps) {
                   alt={popupInfo.title || 'Photo'}
                   fill
                   className="object-cover"
+                  unoptimized
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/5 to-transparent" />
                 <Button

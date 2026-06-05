@@ -11,13 +11,9 @@ import { useState, useEffect, useMemo } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
-import { hasReadyVariants, makeVariantLoader } from '~/lib/image/loader'
-import { useAvifSupport } from '~/hooks/use-avif-support'
 
 // How many leading items load eagerly (priority) rather than lazily. Sized to
 // the widest column count (xl = 5) so the first visible row is always eager,
-// which lets the LCP image start downloading immediately. Variants are tiny
-// AVIFs (~5KB), so a few eager fetches cost almost nothing.
 const LCP_EAGER_COUNT = 5
 const HERO_PHOTO_COUNT = 5
 const HERO_ROTATION_INTERVAL_MS = 3500
@@ -62,32 +58,16 @@ function MasonrySkeletonGrid() {
 function HeroImage({
   photo,
   priority = false,
-  variantBaseUrl = '',
   sizes = HERO_IMAGE_SIZES,
 }: {
   photo?: ImageType
   priority?: boolean
-  variantBaseUrl?: string
   sizes?: string
 }) {
-  const avifOk = useAvifSupport()
   if (!photo) {
     return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
   }
-  const variantReady = hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)
-  const imageProps = variantReady
-    ? {
-        src: photo.image_key,
-        loader: makeVariantLoader({
-          base: variantBaseUrl,
-          imageKey: photo.image_key,
-          readyMaxWidth: photo.ready_max_width,
-          format: (avifOk ? 'avif' : 'webp') as 'avif' | 'webp',
-        }),
-      }
-    : photo.preview_url
-      ? { src: photo.preview_url }
-      : null
+  const imageProps = photo.preview_url ? { src: photo.preview_url } : null
 
   if (!imageProps) {
     return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
@@ -100,6 +80,7 @@ function HeroImage({
       fill
       priority={priority}
       sizes={sizes}
+      unoptimized
       className="object-cover"
     />
   )
@@ -108,11 +89,9 @@ function HeroImage({
 function EditorialHero({
   photos,
   title,
-  variantBaseUrl = '',
 }: {
   photos: ImageType[]
   title?: string
-  variantBaseUrl?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const safePhotos = photos.length > 0 ? photos : []
@@ -160,7 +139,6 @@ function EditorialHero({
               <HeroImage
                 photo={photo}
                 priority
-                variantBaseUrl={variantBaseUrl}
                 sizes={HERO_IMAGE_SIZES}
               />
               <span className={`absolute inset-0 transition-colors duration-700 ${
@@ -251,7 +229,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
     }
   )
 
-  // Public display config (carries the variant CDN base url, when configured).
   const emptyConfig: GalleryDisplayConfig = {
     customIndexDownloadEnable: false,
     customIndexOriginEnable: false,
@@ -260,11 +237,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
     handle: props.configHandle ?? (async () => emptyConfig),
     args: 'system-config',
   })
-  // Prefer the live config, but fall back to the server-passed base on the first
-  // render (before the config SWR resolves) so the grid serves AVIF immediately
-  // instead of double-loading preview thumbnails.
-  const variantBaseUrl = configData?.variantBaseUrl ?? props.variantBaseUrl ?? ''
-
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
   const heroPhotos = useMemo(() => dataList.slice(0, HERO_PHOTO_COUNT), [dataList])
@@ -278,7 +250,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
         <EditorialHero
           photos={heroPhotos}
           title={configData?.customTitle}
-          variantBaseUrl={variantBaseUrl}
         />
       )}
       <section className="bg-background px-5 py-10 sm:px-8 lg:px-12">
@@ -322,7 +293,6 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
                 <MasonryPhotoItem
                   key={photo.id}
                   photo={photo}
-                  variantBaseUrl={variantBaseUrl}
                   priority={index < LCP_EAGER_COUNT}
                   className={frameClassName}
                 />

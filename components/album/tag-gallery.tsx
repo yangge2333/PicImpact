@@ -41,14 +41,13 @@ export default function TagGallery(props : Readonly<ImageHandleProps>) {
     customIndexDownloadEnable: false,
     customIndexOriginEnable: false,
   }
-  const { data: configData } = useSwrHydrated<GalleryDisplayConfig>({
+  useSwrHydrated<GalleryDisplayConfig>({
     handle: props.configHandle ?? (async () => emptyConfig),
     args: 'system-config',
   })
   // Prefer the live config, but fall back to the server-passed base on the first
   // render (before the config SWR resolves) so tag photos serve AVIF immediately
   // instead of double-loading preview thumbnails.
-  const variantBaseUrl = configData?.variantBaseUrl ?? props.variantBaseUrl ?? ''
   const dataList = data?.flat() ?? []
   const t = useTranslations()
   const router = useRouter()
@@ -76,7 +75,6 @@ export default function TagGallery(props : Readonly<ImageHandleProps>) {
                 src: item.preview_url || '',
                 alt: item.detail,
                 ...item,
-                variantBaseUrl,
               })) || []
             }
             render={{image: (...args) => renderNextImage(...args)}}

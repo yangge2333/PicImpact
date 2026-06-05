@@ -206,9 +206,6 @@ export default function PreviewImage(props: Readonly<PreviewImageHandleProps>) {
                 height={props.data.height}
                 width={props.data.width}
                 blurhash={props.data.blurhash}
-                imageKey={props.data.image_key}
-                readyMaxWidth={props.data.ready_max_width}
-                variantBaseUrl={configData?.variantBaseUrl ?? ''}
                 showLightbox={lightboxPhoto}
                 onShowLightboxChange={(value)=>setLightboxPhoto(value)}
               />

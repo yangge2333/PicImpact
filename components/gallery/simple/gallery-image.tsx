@@ -8,61 +8,28 @@ import { MotionImage } from '~/components/album/motion-image'
 import { Skeleton } from '~/components/ui/skeleton'
 import { useState } from 'react'
 import { Badge } from '~/components/ui/badge.tsx'
-import { hasReadyVariants, makeVariantLoader } from '~/lib/image/loader'
-import { useAvifSupport } from '~/hooks/use-avif-support'
 import { SIMPLE_GRID_SIZES } from '~/lib/image/grid-image-sizes'
 
 export default function GalleryImage({
   photo,
-  variantBaseUrl = '',
   priority = false,
 }: {
   photo: ImageType
-  variantBaseUrl?: string
   priority?: boolean
 }) {
   const router = useRouter()
-  const avifOk = useAvifSupport()
-  const [variantFailed, setVariantFailed] = useState(false)
-  // The simple feed must never load the full-resolution original. Use the same
-  // lightweight ladder as the masonry grid: responsive variants, then preview,
-  // then the blurhash/skeleton placeholder for rows that have not been backfilled.
-  const variantReady = !variantFailed && hasReadyVariants(photo.image_key, photo.ready_max_width, variantBaseUrl)
   const previewSrc = photo.preview_url || ''
   const [isLoading, setIsLoading] = useState(true)
   const dataURL = useBlurImageDataUrl(photo.blurhash)
   const hasRealBlurhash = !!photo.blurhash && photo.blurhash !== DEFAULT_HASH
-  const imageProps = variantReady
-    ? {
-        src: photo.image_key,
-        loader: makeVariantLoader({
-          base: variantBaseUrl,
-          imageKey: photo.image_key,
-          readyMaxWidth: photo.ready_max_width,
-          format: (avifOk ? 'avif' : 'webp') as 'avif' | 'webp',
-        }),
-      }
-    : previewSrc
-      ? { src: previewSrc }
-      : null
-  const blurhashOnly = !imageProps && hasRealBlurhash
+  const blurhashOnly = !previewSrc && hasRealBlurhash
 
   const exifParts: string[] = []
-  if (photo?.exif?.make && photo?.exif?.model) {
-    exifParts.push(`${photo.exif.make} ${photo.exif.model}`)
-  }
-  if (photo?.exif?.focal_length) {
-    exifParts.push(photo.exif.focal_length)
-  }
-  if (photo?.exif?.f_number) {
-    exifParts.push(photo.exif.f_number)
-  }
-  if (photo?.exif?.exposure_time) {
-    exifParts.push(photo.exif.exposure_time)
-  }
-  if (photo?.exif?.iso_speed_rating) {
-    exifParts.push(`ISO ${photo.exif.iso_speed_rating}`)
-  }
+  if (photo?.exif?.make && photo?.exif?.model) exifParts.push(`${photo.exif.make} ${photo.exif.model}`)
+  if (photo?.exif?.focal_length) exifParts.push(photo.exif.focal_length)
+  if (photo?.exif?.f_number) exifParts.push(photo.exif.f_number)
+  if (photo?.exif?.exposure_time) exifParts.push(photo.exif.exposure_time)
+  if (photo?.exif?.iso_speed_rating) exifParts.push(`ISO ${photo.exif.iso_speed_rating}`)
 
   return (
     <div className="w-full">
@@ -78,20 +45,18 @@ export default function GalleryImage({
           }
         }}
       >
-        {isLoading && (
+        {isLoading && previewSrc && (
           <Skeleton
             className={cn(
               'absolute inset-0 z-10 rounded-none',
-              hasRealBlurhash
-                ? 'animate-none bg-black/10 backdrop-blur-[2px] dark:bg-white/10'
-                : 'bg-accent'
+              hasRealBlurhash ? 'animate-none bg-black/10 backdrop-blur-[2px] dark:bg-white/10' : 'bg-accent'
             )}
           />
         )}
-        {imageProps ? (
+        {previewSrc ? (
           <MotionImage
-            {...imageProps}
-            key={variantReady ? 'variant' : 'preview'}
+            src={previewSrc}
+            key="preview"
             className={cn('w-full h-auto', isLoading && !hasRealBlurhash && 'animate-pulse')}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -100,17 +65,12 @@ export default function GalleryImage({
             width={photo.width}
             height={photo.height}
             sizes={SIMPLE_GRID_SIZES}
+            unoptimized
             {...(priority ? { priority: true } : { loading: 'lazy' as const })}
             placeholder={hasRealBlurhash ? 'blur' : 'empty'}
             blurDataURL={dataURL}
             onLoad={() => setIsLoading(false)}
-            onError={() => {
-              if (variantReady) {
-                setVariantFailed(true)
-                return
-              }
-              setIsLoading(false)
-            }}
+            onError={() => setIsLoading(false)}
           />
         ) : blurhashOnly ? (
           <div
@@ -124,44 +84,13 @@ export default function GalleryImage({
         ) : (
           <Skeleton
             className="w-full rounded-none bg-stone-200/80 dark:bg-white/10"
-            style={{
-              aspectRatio: photo.width > 0 && photo.height > 0 ? `${photo.width} / ${photo.height}` : '1',
-            }}
+            style={{ aspectRatio: photo.width > 0 && photo.height > 0 ? `${photo.width} / ${photo.height}` : '1' }}
           />
-        )}
-        {photo.type === 2 && (
-          <div className="absolute top-2 left-2 p-5 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" className="absolute bottom-3 right-3 text-white opacity-75 z-10"
-              width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none"
-              strokeLinecap="round" strokeLinejoin="round">
-              <path stroke="none" fill="none"></path>
-              <circle cx="12" cy="12" r="1"></circle>
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="15.9" y1="20.11" x2="15.9" y2="20.12"></line>
-              <line x1="19.04" y1="17.61" x2="19.04" y2="17.62"></line>
-              <line x1="20.77" y1="14" x2="20.77" y2="14.01"></line>
-              <line x1="20.77" y1="10" x2="20.77" y2="10.01"></line>
-              <line x1="19.04" y1="6.39" x2="19.04" y2="6.4"></line>
-              <line x1="15.9" y1="3.89" x2="15.9" y2="3.9"></line>
-              <line x1="12" y1="3" x2="12" y2="3.01"></line>
-              <line x1="8.1" y1="3.89" x2="8.1" y2="3.9"></line>
-              <line x1="4.96" y1="6.39" x2="4.96" y2="6.4"></line>
-              <line x1="3.23" y1="10" x2="3.23" y2="10.01"></line>
-              <line x1="3.23" y1="14" x2="3.23" y2="14.01"></line>
-              <line x1="4.96" y1="17.61" x2="4.96" y2="17.62"></line>
-              <line x1="8.1" y1="20.11" x2="8.1" y2="20.12"></line>
-              <line x1="12" y1="21" x2="12" y2="21.01"></line>
-            </svg>
-          </div>
         )}
       </div>
       <div className="mt-3 px-1">
         <h3 className="font-display text-lg">{photo.title}</h3>
-        {exifParts.length > 0 && (
-          <p className="text-sm text-muted-foreground mt-1">
-            {exifParts.join(' \u00B7 ')}
-          </p>
-        )}
+        {exifParts.length > 0 && <p className="text-sm text-muted-foreground mt-1">{exifParts.join(' \u00B7 ')}</p>}
         {photo?.labels && photo.labels.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {photo.labels.map((tag: string) => (

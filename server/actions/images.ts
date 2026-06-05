@@ -9,7 +9,6 @@ import {
   cachedConfigValue,
   cachedDailyImagesList,
   cachedDailyImagesPageTotal,
-  cachedVariantBaseUrl,
 } from '~/server/lib/cache'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
 
@@ -44,7 +43,6 @@ export async function getDisplayConfig(): Promise<GalleryDisplayConfig> {
     customTitle: get('custom_title') ?? undefined,
     customIndexDownloadEnable: get('custom_index_download_enable') === 'true',
     customIndexOriginEnable: get('custom_index_origin_enable') === 'true',
-    variantBaseUrl: await cachedVariantBaseUrl(),
   }
 }
 
@@ -54,7 +52,6 @@ export async function getAlbumDisplayConfig(): Promise<GalleryDisplayConfig> {
   return {
     customIndexDownloadEnable: get('custom_index_download_enable') === 'true',
     customIndexOriginEnable: false,
-    variantBaseUrl: await cachedVariantBaseUrl(),
   }
 }
 

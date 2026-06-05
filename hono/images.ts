@@ -47,10 +47,8 @@ app.post('/', async (c) => {
     if (typeof body.image_name === 'string') {
       body.image_name = body.image_name.split(/[\\/]/).pop()?.trim() || null
     }
-    // New images are stored with variants_ready=false; the background
-    // preprocess ticker (see instrumentation.ts) picks them up asynchronously
-    // and generates variants via a tracked /admin/tasks run — no inline work
-    // on the upload request.
+    // The admin upload flow has already produced the preview image before
+    // this request; this endpoint only persists the image metadata.
     await insertImage(body)
     return okEmpty(c)
   } catch (e) {

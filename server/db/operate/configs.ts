@@ -1,27 +1,16 @@
-// 配置表
-
 'use server'
 
 import { db } from '~/server/lib/db'
 import { revalidateConfigCache } from '~/server/lib/cache'
 import { normalizeDefaultTheme } from '~/lib/utils/theme'
-import type { CustomInfo, R2Info, S3Info, OpenListInfo, VariantStorageInfo } from '~/types'
+import type { CustomInfo, R2Info, S3Info, OpenListInfo } from '~/types'
 
-// The configs table stores everything as text, so boolean values coming from
-// the API layer (real `boolean`) need to be serialised back to 'true' / 'false'
-// before they hit the raw SQL UPDATE statements below. `toBoolString` accepts
-// both real booleans (the new API contract) and pre-serialised strings (any
-// remaining legacy call sites) to keep the layer permissive during migration.
 const toBoolString = (value: boolean | string | undefined | null): string => {
   if (typeof value === 'boolean') return value ? 'true' : 'false'
   if (value === 'true' || value === 'false') return value
   return 'false'
 }
 
-/**
- * 更新 S3 配置
- * @param configs S3 配置（camelCase, see {@link S3Info}）
- */
 export async function updateS3Config(configs: S3Info) {
   const forcePathStyle = toBoolString(configs.forcePathStyle)
   const s3Cdn = toBoolString(configs.s3Cdn)
@@ -48,10 +37,6 @@ export async function updateS3Config(configs: S3Info) {
   return result
 }
 
-/**
- * 更新 R2 配置
- * @param configs R2 配置（camelCase, see {@link R2Info}）
- */
 export async function updateR2Config(configs: R2Info) {
   const r2DirectDownload = toBoolString(configs.r2DirectDownload)
   const result = await db.$executeRaw`
@@ -73,10 +58,6 @@ export async function updateR2Config(configs: R2Info) {
   return result
 }
 
-/**
- * 更新 Open List 配置
- * @param configs Open List 配置（camelCase, see {@link OpenListInfo}）
- */
 export async function updateOpenListConfig(configs: OpenListInfo) {
   const result = await db.$executeRaw`
     UPDATE "public"."configs"
@@ -92,25 +73,6 @@ export async function updateOpenListConfig(configs: OpenListInfo) {
   return result
 }
 
-/**
- * 更新变体存储后端配置（预处理管线上传变体的目标：'' | 's3' | 'r2'）。
- * upsert 以兼容尚未重新 seed 出 `variant_storage` 行的旧实例。
- */
-export async function updateVariantStorageConfig(payload: VariantStorageInfo) {
-  const value = payload.variantStorage === 's3' || payload.variantStorage === 'r2' ? payload.variantStorage : ''
-  const result = await db.configs.upsert({
-    where: { config_key: 'variant_storage' },
-    update: { config_value: value, updatedAt: new Date() },
-    create: { config_key: 'variant_storage', config_value: value },
-  })
-  revalidateConfigCache()
-  return result
-}
-
-/**
- * 更新自定义信息
- * @param payload 自定义信息（camelCase API shape, see {@link CustomInfo}）
- */
 export async function updateCustomInfo(payload: CustomInfo) {
   const {
     customTitle,
@@ -169,4 +131,3 @@ export async function updateCustomInfo(payload: CustomInfo) {
   revalidateConfigCache()
   return result
 }
-

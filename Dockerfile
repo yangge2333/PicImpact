@@ -57,6 +57,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=runner-base --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder /app/public ./public
 COPY ./prisma ./prisma
+COPY ./scripts ./scripts
 COPY ./script.sh ./script.sh
 
 RUN sed -i 's/\r$//' script.sh && chmod +x script.sh

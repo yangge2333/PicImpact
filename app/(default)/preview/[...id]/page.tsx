@@ -1,7 +1,7 @@
 import { fetchImageByIdAndAuth } from '~/server/db/query/images'
 import type { PreviewImageHandleProps } from '~/types/props'
 import PreviewImage from '~/components/album/preview-image'
-import { cachedConfigsByKeys, cachedVariantBaseUrl } from '~/server/lib/cache'
+import { cachedConfigsByKeys } from '~/server/lib/cache'
 import type { GalleryDisplayConfig } from '~/types'
 import type { Metadata } from 'next/types'
 
@@ -57,7 +57,6 @@ export default async function PreView({params}: { params: any }) {
     return {
       customIndexDownloadEnable: value === 'true',
       customIndexOriginEnable: false,
-      variantBaseUrl: await cachedVariantBaseUrl(),
     }
   }
 

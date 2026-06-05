@@ -128,7 +128,7 @@ export default function PhotoViewer({ photo, photos }: PhotoViewerProps) {
             )}
           >
             <Image
-              src={currentPhoto.url}
+              src={currentPhoto.preview_url || currentPhoto.url}
               alt={currentPhoto.title || ''}
               width={currentPhoto.width}
               height={currentPhoto.height}

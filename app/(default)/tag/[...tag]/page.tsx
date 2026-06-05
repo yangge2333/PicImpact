@@ -1,7 +1,6 @@
 import type { ImageHandleProps } from '~/types/props'
 import { fetchClientImagesListByTag, fetchClientImagesPageTotalByTag } from '~/server/db/query/images'
 import { getDisplayConfig } from '~/server/actions/images'
-import { getVariantBaseUrl } from '~/server/lib/variant-storage'
 import TagGallery from '~/components/album/tag-gallery'
 
 import 'react-photo-album/masonry.css'
@@ -22,15 +21,12 @@ export default async function Label({params}: { params: any }) {
 
   // Server-resolved so the tag gallery serves AVIF on the first render (no
   // preview double-load while the client config SWR is still pending).
-  const variantBaseUrl = await getVariantBaseUrl().catch(() => '')
-
   const props: ImageHandleProps = {
     handle: getData,
     args: 'getImages-client-tag',
     album: `${decodeURIComponent(tag)}`,
     totalHandle: getPageTotal,
     configHandle: getDisplayConfig,
-    variantBaseUrl,
   }
 
   return (
