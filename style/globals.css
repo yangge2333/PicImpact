@@ -269,6 +269,22 @@
       display: block;
     }
   }
+
+  @media (max-aspect-ratio: 3/4) {
+    .hero-accordion-slide {
+      border-right-width: 0;
+    }
+
+    .hero-accordion-slide[data-active="true"] {
+      flex: 1 1 100% !important;
+    }
+
+    .hero-accordion-slide:not([data-active="true"]) {
+      flex: 0 0 0 !important;
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
 }
 
 /* Recharts stroke overrides — cannot use Tailwind arbitrary selectors due to CSS parser issues with escaped quotes */

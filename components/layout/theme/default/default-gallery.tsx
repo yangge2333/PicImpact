@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo } from 'react'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
+import { ArrowUp } from 'lucide-react'
 
 // How many leading items load eagerly (priority) rather than lazily. Sized to
 // the widest column count (xl = 5) so the first visible row is always eager,
@@ -95,10 +96,11 @@ function EditorialHero({
   title?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [progress, setProgress] = useState(0)
   const safePhotos = photos.length > 0 ? photos : []
   const primary = safePhotos[activeIndex % safePhotos.length]
   const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, HERO_PHOTO_COUNT))
-  const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
+  const featuredTitle = title || '船长的摄影小屋'
   const channelLabels = [
     { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
     { name: '场照', detail: '活动现场纪实', href: '/changzhao' },
@@ -113,13 +115,32 @@ function EditorialHero({
 
   useEffect(() => {
     if (accordionPhotos.length <= 1) {
+      setProgress(100)
       return
     }
-    const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % accordionPhotos.length)
-    }, HERO_ROTATION_INTERVAL_MS)
-    return () => window.clearInterval(timer)
-  }, [accordionPhotos.length])
+
+    let animationFrame = 0
+    let startedAt = window.performance.now()
+
+    const updateProgress = (timestamp: number) => {
+      const nextProgress = ((timestamp - startedAt) / HERO_ROTATION_INTERVAL_MS) * 100
+
+      if (nextProgress >= 100) {
+        setProgress(0)
+        setActiveIndex((index) => (index + 1) % accordionPhotos.length)
+        startedAt = timestamp
+      } else {
+        setProgress(nextProgress)
+      }
+
+      animationFrame = window.requestAnimationFrame(updateProgress)
+    }
+
+    setProgress(0)
+    animationFrame = window.requestAnimationFrame(updateProgress)
+
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [accordionPhotos.length, activeIndex])
 
   return (
     <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
@@ -131,7 +152,8 @@ function EditorialHero({
               key={photo.id}
               type="button"
               aria-label={`Show image ${index + 1}`}
-              className={`group relative h-full min-w-0 appearance-none overflow-hidden border-0 border-r border-white/10 p-0 text-left transition-[flex] duration-700 ease-[var(--ease-out-expo)] last:border-r-0 ${
+              data-active={isActive}
+              className={`hero-accordion-slide group relative h-full min-w-0 appearance-none overflow-hidden border-0 border-r border-white/10 p-0 text-left transition-[flex,opacity] duration-700 ease-[var(--ease-out-expo)] last:border-r-0 ${
                 isActive ? 'flex-[5.8]' : 'flex-[0.72] hover:flex-[1.15]'
               }`}
               onClick={() => handleSelectSlide(index)}
@@ -154,29 +176,35 @@ function EditorialHero({
           )
         })}
       </div>
+      <div className="absolute left-1/2 top-16 z-20 h-[5px] w-36 -translate-x-1/2 overflow-hidden rounded-full border border-white/55 bg-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm sm:top-20 sm:w-44">
+        <span
+          className="block h-full rounded-full bg-white transition-[width] duration-100 ease-linear"
+          style={{ width: `${Math.min(progress, 100)}%` }}
+        />
+      </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
       <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-12 pt-20 sm:px-10 md:pb-14 lg:px-16 lg:pb-16">
-        <div className="relative w-full max-w-[min(46rem,calc(100vw-2.5rem))] overflow-hidden border border-white/10 bg-black/22 px-4 py-4 shadow-[0_20px_76px_rgba(0,0,0,0.2)] backdrop-blur-[2px] sm:px-5 sm:py-4">
-          <p className="mb-3 text-[10px] font-semibold uppercase text-white/62">
+        <div className="relative w-full max-w-[min(40rem,calc(100vw-2.5rem))] overflow-hidden border border-white/12 bg-black/30 px-5 py-5 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-md sm:px-6 sm:py-5">
+          <p className="mb-4 text-[10px] font-semibold uppercase text-white/64">
             Featured Gallery
           </p>
-          <h1 className="whitespace-nowrap font-display text-[clamp(2.35rem,3.85vw,3.95rem)] font-semibold leading-none tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)]">
+          <h1 className="font-display text-[clamp(2.1rem,3.35vw,3.65rem)] font-semibold leading-[1.05] tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)]">
             {featuredTitle}
           </h1>
-          <p className="mt-4 whitespace-nowrap text-xs leading-6 text-white/72 sm:text-sm">
+          <p className="mt-4 max-w-[34rem] text-xs leading-6 text-white/76 sm:text-sm">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
           <p className="mt-2 text-xs leading-5 text-white/68 sm:text-sm">
             联系方式 QQ: 774202796 WX: 13634085297
           </p>
-          <div className="mt-5 grid w-full max-w-[25rem] grid-cols-3 gap-2">
+          <div className="mt-6 grid w-full max-w-[26rem] grid-cols-3 gap-2.5">
             {channelLabels.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="relative min-h-[5rem] overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl transition-colors hover:bg-black/34 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-4 sm:py-3.5"
+                className="relative min-h-[4.75rem] overflow-hidden border border-white/20 bg-white/8 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.14)] backdrop-blur-xl transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-4 sm:py-3.5"
               >
-                <span className="block font-display text-[clamp(1.25rem,2vw,1.75rem)] font-semibold leading-none tracking-normal">
+                <span className="block font-display text-[clamp(1.18rem,1.7vw,1.55rem)] font-semibold leading-none tracking-normal">
                   {item.name}
                 </span>
                 <span className="mt-2 block text-[10px] leading-4 text-white/58">
@@ -199,6 +227,33 @@ function EditorialHero({
         ))}
       </div>
     </section>
+  )
+}
+
+function ScrollTopButton() {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const updateVisibility = () => {
+      setVisible(window.scrollY > 420)
+    }
+
+    updateVisibility()
+    window.addEventListener('scroll', updateVisibility, { passive: true })
+    return () => window.removeEventListener('scroll', updateVisibility)
+  }, [])
+
+  return (
+    <button
+      type="button"
+      aria-label="Back to top"
+      className={`fixed bottom-5 right-5 z-40 grid h-12 w-12 place-items-center rounded-full border border-foreground/15 bg-background/72 text-foreground shadow-[0_14px_42px_rgba(0,0,0,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-background/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:bottom-7 sm:right-7 ${
+        visible ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
+      }`}
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+    >
+      <ArrowUp size={22} strokeWidth={1.8} />
+    </button>
   )
 }
 
@@ -247,14 +302,17 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
   const isPaginating = isValidating && dataList.length > 0
   const t = useTranslations()
 
+  if (showHero && heroPhotos.length > 0) {
+    return (
+      <EditorialHero
+        photos={heroPhotos}
+        title={configData?.customTitle}
+      />
+    )
+  }
+
   return (
     <>
-      {showHero && heroPhotos.length > 0 && (
-        <EditorialHero
-          photos={heroPhotos}
-          title={configData?.customTitle}
-        />
-      )}
       <section className="bg-background px-5 py-10 sm:px-8 lg:px-12">
         <div className="mx-auto flex max-w-[1680px] items-end justify-between gap-6 border-b border-foreground/10 pb-8">
           <div>
@@ -309,6 +367,7 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
           </div>
         )}
       </InfiniteScroll>
+      {!showHero && <ScrollTopButton />}
     </>
   )
 }
