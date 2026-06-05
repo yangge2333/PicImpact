@@ -19,6 +19,7 @@ export default async function Home() {
     totalHandle: getImagesPageTotal,
     configHandle: getDisplayConfig,
     albums,
+    showHero: true,
     // Server-resolved so the gallery serves AVIF on the first render (no
     // preview double-load while the client config SWR is still pending).
   }

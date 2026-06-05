@@ -24,6 +24,7 @@ export default async function Page({
     album: `/${album}`,
     totalHandle: getImagesPageTotal,
     configHandle: getAlbumDisplayConfig,
+    showHero: false,
     // Server-resolved so the gallery serves AVIF on the first render (no
     // preview double-load while the client config SWR is still pending).
   }

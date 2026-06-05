@@ -23,6 +23,7 @@ export type ImageHandleProps = {
   totalHandle: (album: string, camera?: string, lens?: string) => Promise<number>
   configHandle?: () => Promise<GalleryDisplayConfig>
   albums?: AlbumType[]
+  showHero?: boolean
 }
 
 export type PreviewImageHandleProps = {

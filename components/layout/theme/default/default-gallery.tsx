@@ -2,6 +2,7 @@
 
 import type { ImageHandleProps } from '~/types/props.ts'
 import Image from 'next/image'
+import Link from 'next/link'
 import useSWRInfinite from 'swr/infinite'
 import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
@@ -99,9 +100,9 @@ function EditorialHero({
   const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, HERO_PHOTO_COUNT))
   const featuredTitle = primary?.album_name || primary?.title || title || 'PicImpact'
   const channelLabels = [
-    { name: '正片', detail: '精选成片作品集' },
-    { name: '场照', detail: '活动现场纪实' },
-    { name: '旅拍', detail: '旅途与目的地影像' },
+    { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
+    { name: '场照', detail: '活动现场纪实', href: '/changzhao' },
+    { name: '旅拍', detail: '旅途与目的地影像', href: '/lvpai' },
   ]
   const handleSelectSlide = (index: number) => {
     if (index === activeIndex) {
@@ -170,9 +171,10 @@ function EditorialHero({
           </p>
           <div className="mt-5 grid w-full max-w-[25rem] grid-cols-3 gap-2">
             {channelLabels.map((item) => (
-              <div
+              <Link
                 key={item.name}
-                className="relative min-h-[5rem] overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl sm:px-4 sm:py-3.5"
+                href={item.href}
+                className="relative min-h-[5rem] overflow-hidden border border-white/22 bg-black/18 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl transition-colors hover:bg-black/34 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-4 sm:py-3.5"
               >
                 <span className="block font-display text-[clamp(1.25rem,2vw,1.75rem)] font-semibold leading-none tracking-normal">
                   {item.name}
@@ -180,7 +182,7 @@ function EditorialHero({
                 <span className="mt-2 block text-[10px] leading-4 text-white/58">
                   {item.detail}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -240,13 +242,14 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
   const heroPhotos = useMemo(() => dataList.slice(0, HERO_PHOTO_COUNT), [dataList])
+  const showHero = props.showHero ?? false
   const showInitialSkeleton = dataList.length === 0 && isValidating
   const isPaginating = isValidating && dataList.length > 0
   const t = useTranslations()
 
   return (
     <>
-      {heroPhotos.length > 0 && (
+      {showHero && heroPhotos.length > 0 && (
         <EditorialHero
           photos={heroPhotos}
           title={configData?.customTitle}
