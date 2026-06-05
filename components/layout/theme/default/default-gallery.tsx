@@ -143,7 +143,7 @@ function EditorialHero({
   }, [accordionPhotos.length, activeIndex])
 
   return (
-    <section className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden bg-stone-950 text-white">
+    <section className="relative min-h-[calc(100svh-2.5rem)] overflow-hidden bg-stone-950 text-white sm:min-h-[calc(100svh-3rem)]">
       <div className="absolute inset-0 flex bg-black">
         {accordionPhotos.map((photo, index) => {
           const isActive = index === activeIndex
@@ -176,38 +176,38 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute left-1/2 top-16 z-20 h-[5px] w-36 -translate-x-1/2 overflow-hidden rounded-full border border-white/55 bg-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm sm:top-20 sm:w-44">
+      <div className="absolute left-1/2 top-11 z-20 h-[4px] w-[46vw] -translate-x-1/2 overflow-hidden rounded-full border border-white/55 bg-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm sm:top-16 sm:h-[5px] sm:w-44">
         <span
           className="block h-full rounded-full bg-white transition-[width] duration-100 ease-linear"
           style={{ width: `${Math.min(progress, 100)}%` }}
         />
       </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-3.5rem)] items-end px-5 pb-12 pt-20 sm:px-10 md:pb-14 lg:px-16 lg:pb-16">
-        <div className="relative w-full max-w-[min(40rem,calc(100vw-2.5rem))] overflow-hidden border border-white/12 bg-black/30 px-5 py-5 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-md sm:px-6 sm:py-5">
-          <p className="mb-4 text-[10px] font-semibold uppercase text-white/64">
+      <div className="relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-2 pb-2 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
+        <div className="relative w-full max-w-none overflow-hidden border border-white/12 bg-black/30 px-3 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-md sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5">
+          <p className="mb-2 text-[9px] font-semibold uppercase text-white/64 sm:mb-4 sm:text-[10px]">
             Featured Gallery
           </p>
-          <h1 className="font-display text-[clamp(2.1rem,3.35vw,3.65rem)] font-semibold leading-[1.05] tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)]">
+          <h1 className="font-display text-[clamp(1.65rem,7.8vw,2.35rem)] font-semibold leading-[1.03] tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)] sm:text-[clamp(2.1rem,3.35vw,3.65rem)]">
             {featuredTitle}
           </h1>
-          <p className="mt-4 max-w-[34rem] text-xs leading-6 text-white/76 sm:text-sm">
+          <p className="mt-2 max-w-[34rem] text-[11px] leading-5 text-white/76 sm:mt-4 sm:text-sm sm:leading-6">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <p className="mt-2 text-xs leading-5 text-white/68 sm:text-sm">
+          <p className="mt-1.5 text-[11px] leading-4 text-white/68 sm:mt-2 sm:text-sm sm:leading-5">
             联系方式 QQ: 774202796 WX: 13634085297
           </p>
-          <div className="mt-6 grid w-full max-w-[26rem] grid-cols-3 gap-2.5">
+          <div className="mt-3 grid w-full max-w-none grid-cols-3 gap-1.5 sm:mt-6 sm:max-w-[26rem] sm:gap-2.5">
             {channelLabels.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="relative min-h-[4.75rem] overflow-hidden border border-white/20 bg-white/8 px-4 py-3 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.14)] backdrop-blur-xl transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-4 sm:py-3.5"
+                className="relative min-h-[4.1rem] overflow-hidden border border-white/20 bg-white/8 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.14)] backdrop-blur-xl transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
               >
-                <span className="block font-display text-[clamp(1.18rem,1.7vw,1.55rem)] font-semibold leading-none tracking-normal">
+                <span className="block font-display text-[1.25rem] font-semibold leading-none tracking-normal sm:text-[clamp(1.18rem,1.7vw,1.55rem)]">
                   {item.name}
                 </span>
-                <span className="mt-2 block text-[10px] leading-4 text-white/58">
+                <span className="mt-1.5 block text-[9px] leading-3 text-white/58 sm:mt-2 sm:text-[10px] sm:leading-4">
                   {item.detail}
                 </span>
               </Link>
