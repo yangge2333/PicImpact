@@ -8,13 +8,7 @@ import type { ImageType } from '~/types'
 import { fetchConfigValue } from './configs'
 import { buildExifFilters, buildPagination, buildShowFilter, calcPageTotal } from './helpers'
 
-const ALBUM_IMAGE_SORTING_ORDER = [
-  null,
-  'image.created_at DESC, image.updated_at DESC',
-  'COALESCE(TO_TIMESTAMP(image.exif->>\'dateTime\', \'YYYY:MM:DD HH24:MI:SS\'), \'1970-01-01 00:00:00\') DESC, image.created_at DESC, image.updated_at DESC',
-  'image.created_at ASC, image.updated_at ASC',
-  'COALESCE(TO_TIMESTAMP(image.exif->>\'dateTime\', \'YYYY:MM:DD HH24:MI:SS\'), \'1970-01-01 00:00:00\') ASC, image.created_at ASC, image.updated_at ASC',
-]
+const UPLOAD_TIME_DESC_ORDER = Prisma.sql`image.created_at DESC, image.updated_at DESC`
 
 const DEFAULT_SIZE = 24
 
@@ -65,7 +59,7 @@ export async function fetchServerImagesListByAlbum(
           albums.album_value = ${album}
           ${buildShowFilter(showStatus)}
           ${buildExifFilters(camera, lens)}
-      ORDER BY image.sort DESC, image.created_at DESC, image.updated_at DESC
+      ORDER BY ${UPLOAD_TIME_DESC_ORDER}
       ${buildPagination(pageNum, pageSize)}
     `
   }
@@ -84,7 +78,7 @@ export async function fetchServerImagesListByAlbum(
         image.del = 0
         ${buildShowFilter(showStatus)}
         ${buildExifFilters(camera, lens)}
-    ORDER BY image.sort DESC, image.created_at DESC, image.updated_at DESC
+    ORDER BY ${UPLOAD_TIME_DESC_ORDER}
     ${buildPagination(pageNum, pageSize)}
   `
 }
@@ -177,18 +171,9 @@ export async function fetchClientImagesListByAlbum(
     AND
         image.show_on_mainpage = 0
     ${buildExifFilters(camera, lens)}
-    ORDER BY image.sort DESC, image.created_at DESC, image.updated_at DESC
+    ORDER BY ${UPLOAD_TIME_DESC_ORDER}
     ${buildPagination(pageNum, DEFAULT_SIZE)}
   `
-  }
-  const albumData = await db.albums.findFirst({
-    where: {
-      album_value: album
-    }
-  })
-  let orderBy = Prisma.sql(['image.sort DESC, image.created_at DESC, image.updated_at DESC'])
-  if (albumData && albumData.image_sorting && ALBUM_IMAGE_SORTING_ORDER[albumData.image_sorting]) {
-    orderBy = Prisma.sql([`image.sort DESC, ${ALBUM_IMAGE_SORTING_ORDER[albumData.image_sorting]}`])
   }
   const dataList: any[] = await db.$queryRaw`
     SELECT 
@@ -214,12 +199,9 @@ export async function fetchClientImagesListByAlbum(
     AND
         albums.album_value = ${album}
     ${buildExifFilters(camera, lens)}
-    ORDER BY ${orderBy}
+    ORDER BY ${UPLOAD_TIME_DESC_ORDER}
     ${buildPagination(pageNum, DEFAULT_SIZE)}
   `
-  if (dataList && albumData && albumData.random_show === 0) {
-    return [...dataList].sort(() => Math.random() - 0.5)
-  }
   return dataList
 }
 
@@ -346,7 +328,7 @@ export async function fetchClientImagesListByTag(pageNum: number, tag: string): 
         albums.show = 0
     AND
         image.labels::jsonb @> ${JSON.stringify([tag])}::jsonb
-    ORDER BY image.sort DESC, image.created_at DESC, image.updated_at DESC
+    ORDER BY ${UPLOAD_TIME_DESC_ORDER}
     ${buildPagination(pageNum, DEFAULT_SIZE)}
   `
 }
