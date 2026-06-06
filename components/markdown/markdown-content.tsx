@@ -103,6 +103,22 @@ export function MarkdownContent({ content }: { content: string }) {
       continue
     }
 
+    const image = /^!\[([^\]]*)\]\(([^)\s]+)\)$/.exec(line)
+    if (image) {
+      flushParagraph(blocks, paragraphLines, 'p')
+      blocks.push(
+        <figure key={`image-${blocks.length}`} className="flex justify-center py-2">
+          <img
+            src={isSafeHref(image[2]) ? image[2] : '#'}
+            alt={image[1]}
+            loading="lazy"
+            className="h-28 w-28 rounded-full border border-foreground/10 object-cover shadow-[0_18px_48px_rgba(0,0,0,0.16)]"
+          />
+        </figure>
+      )
+      continue
+    }
+
     if (/^---+$/.test(line)) {
       flushParagraph(blocks, paragraphLines, 'p')
       blocks.push(<hr key={`hr-${blocks.length}`} />)
