@@ -34,7 +34,14 @@ import { ListTodoIcon } from '~/components/icons/list-todo'
 import { DownloadIcon } from '~/components/icons/download'
 import { AnimatedIconTrigger, mergeAnimatedTriggerProps } from '~/components/icons/animated-trigger'
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  siteTitle,
+  siteLogo,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  siteTitle?: string
+  siteLogo?: string
+}) {
   const router = useRouter()
   const t = useTranslations()
 
@@ -116,7 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" role="navigation" aria-label="Admin sidebar" {...props}>
       <SidebarHeader>
-        <NavTitle />
+        <NavTitle title={siteTitle} logo={siteLogo} />
       </SidebarHeader>
       <SidebarContent className="select-none">
         <NavMain items={data.navMain} />

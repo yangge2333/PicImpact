@@ -15,6 +15,8 @@ import { getLocale, getMessages } from 'next-intl/server'
 import { ConfigStoreProvider } from '~/app/providers/config-store-providers'
 import Script from 'next/script'
 
+const FALLBACK_LOGO_PATH = '/fallback-logo.jpg'
+
 const sourceSerif4 = Source_Serif_4({
   subsets: ['latin'],
   variable: '--font-display',
@@ -39,6 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const title = info.customTitle || 'PicImpact'
   const author = info.customAuthor
+  const icon = info.customFaviconUrl || FALLBACK_LOGO_PATH
   const description = author
     ? `${author}'s photography portfolio — powered by PicImpact`
     : 'A photography portfolio powered by PicImpact'
@@ -47,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: process.env.BETTER_AUTH_URL ? new URL(process.env.BETTER_AUTH_URL) : null,
     title,
     description,
-    icons: { icon: info.customFaviconUrl || './favicon.ico' },
+    icons: { icon },
     manifest: '/manifest.json',
     openGraph: {
       title,
@@ -63,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: {
       capable: true,
       statusBarStyle: 'default',
-      title: 'PicImpact',
+      title,
     }
   }
 }
@@ -88,6 +91,8 @@ export default async function RootLayout({
   const messages = await getMessages()
 
   const rows = await cachedConfigsByKeys([
+    'custom_title',
+    'custom_favicon_url',
     'default_theme',
     'umami_analytics',
     'umami_host'
@@ -100,16 +105,17 @@ export default async function RootLayout({
   const defaultTheme = info.defaultTheme as 'light' | 'dark' | 'system'
   const umamiHost = info.umamiHost || 'https://cloud.umami.is/script.js'
   const umamiAnalytics = info.umamiAnalytics
+  const icon = info.customFaviconUrl || FALLBACK_LOGO_PATH
 
   return (
     <html className={`overflow-y-auto scrollbar-hide ${sourceSerif4.variable} ${sourceSans3.variable}`} lang={locale} suppressHydrationWarning>
     <head>
       <link rel="manifest" href="/manifest.json" />
       <meta name="theme-color" content="#2d2518" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      <link rel="apple-touch-icon" href={icon} />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-      <meta name="apple-mobile-web-app-title" content="PicImpact" />
+      <meta name="apple-mobile-web-app-title" content={info.customTitle || 'PicImpact'} />
     </head>
     <body>
     <NextIntlClientProvider messages={messages}>

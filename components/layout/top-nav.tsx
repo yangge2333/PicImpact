@@ -49,13 +49,13 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
 
   return (
     <>
-      <header className="fixed top-0 inset-x-0 z-50 h-10 sm:h-12">
+      <header className="fixed top-0 inset-x-0 z-50 h-10">
         <div className="absolute inset-0 border-b border-white/10 bg-background/55 backdrop-blur-2xl dark:bg-black/25" />
-        <nav className="relative flex h-10 items-center justify-between px-3 sm:h-12 sm:px-4 lg:px-8">
+        <nav className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6">
           {/* Left: Site logo/name */}
           <Link
             href="/"
-            className="shrink-0 font-display text-sm font-semibold tracking-normal text-foreground transition-opacity hover:opacity-70 sm:text-base"
+            className="shrink-0 font-display text-sm font-semibold tracking-normal text-foreground transition-opacity hover:opacity-70"
           >
             {props.title || 'PicImpact'}
           </Link>
@@ -96,18 +96,18 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
             <button
               type="button"
               onClick={() => router.push('/map')}
-              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:min-h-[44px] sm:min-w-[44px] sm:p-2"
+              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('Link.map')}
             >
-              <MapPin className="size-4 sm:size-[18px]" />
+              <MapPin className="size-4" />
             </button>
             <button
               type="button"
               onClick={() => setCommand(true)}
-              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:min-h-[44px] sm:min-w-[44px] sm:p-2"
+              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('Command.placeholder')}
             >
-              <Search className="size-4 sm:size-[18px]" />
+              <Search className="size-4" />
             </button>
             <button
               type="button"
@@ -117,11 +117,11 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
                 }
                 setTheme(resolvedTheme === 'light' ? 'dark' : 'light')
               }}
-              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:min-h-[44px] sm:min-w-[44px] sm:p-2"
+              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={themeToggleLabel}
               disabled={!isHydrated}
             >
-              {!isHydrated ? <SunMoon className="size-4 sm:size-[18px]" /> : resolvedTheme === 'light' ? <Sun className="size-4 sm:size-[18px]" /> : <Moon className="size-4 sm:size-[18px]" />}
+              {!isHydrated ? <SunMoon className="size-4" /> : resolvedTheme === 'light' ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
           </div>
         </nav>

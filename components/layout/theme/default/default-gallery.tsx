@@ -223,14 +223,12 @@ function EditorialHero({
               onClick={() => handleSelectSlide(index)}
               onFocus={() => handleSelectSlide(index)}
             >
-              {!isActive && (
-                <HeroImage
-                  photo={photo}
-                  priority={index === 0}
-                  sizes={HERO_IMAGE_SIZES}
-                  heroPosition={photo.hero_position ?? 0}
-                />
-              )}
+              <HeroImage
+                photo={photo}
+                priority={index === 0}
+                sizes={HERO_IMAGE_SIZES}
+                heroPosition={isActive ? 0 : photo.hero_position ?? 0}
+              />
               <span className={`absolute inset-0 transition-colors duration-700 ${
                 isActive ? 'bg-black/0' : 'bg-black/34 group-hover:bg-black/14'
               }`} />
@@ -243,7 +241,7 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute left-1/2 top-11 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/18 bg-black/16 px-2.5 py-1.5 shadow-[0_10px_34px_rgba(0,0,0,0.18)] backdrop-blur-md sm:top-16 sm:gap-2.5">
+      <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 items-center gap-2 rounded-b-2xl border border-t-0 border-white/18 bg-black/16 px-3 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] backdrop-blur-md sm:gap-2.5">
         {accordionPhotos.map((photo, index) => {
           const color = slideColors[index] || HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
           const isActive = index === activeIndex

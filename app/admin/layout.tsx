@@ -1,15 +1,20 @@
 import { AdminToolbar } from '~/components/layout/admin/admin-toolbar'
 import { AppSidebar } from '~/components/layout/admin/app-sidebar'
 import { SidebarInset, SidebarProvider } from '~/components/ui/sidebar'
+import { cachedConfigsByKeys } from '~/server/lib/cache'
+import { toCustomInfo } from '~/server/lib/config-transform'
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const rows = await cachedConfigsByKeys(['custom_title', 'custom_favicon_url'])
+  const info = toCustomInfo(rows)
+
   return (
     <SidebarProvider defaultOpen={true} className="h-svh overflow-hidden">
-      <AppSidebar />
+      <AppSidebar siteTitle={info.customTitle || 'PicImpact'} siteLogo={info.customFaviconUrl} />
       <SidebarInset
         id="main-content"
         className="min-h-0 min-w-0 overflow-hidden"

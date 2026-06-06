@@ -1,11 +1,17 @@
-import favicon from '~/public/favicon.svg'
+import fallbackLogo from '~/public/fallback-logo.jpg'
 import Image from 'next/image'
 import Link from 'next/link'
 import { fetchContributors } from '~/lib/github/get-contributors'
 import { EvervaultCard, Icon } from '~/components/ui/origin/evervault-card'
+import { cachedConfigsByKeys } from '~/server/lib/cache'
+import { toCustomInfo } from '~/server/lib/config-transform'
 
 export default async function About() {
-  const contributors = await fetchContributors('besscroft', 'PicImpact')
+  const [contributors, rows] = await Promise.all([
+    fetchContributors('besscroft', 'PicImpact'),
+    cachedConfigsByKeys(['custom_favicon_url']),
+  ])
+  const info = toCustomInfo(rows)
 
   return (
     <div className="flex flex-col space-y-4 h-full flex-1 w-full mx-auto items-center p-2">
@@ -15,7 +21,7 @@ export default async function About() {
       >
         <Image
           className="my-4 select-none"
-          src={favicon}
+          src={info.customFaviconUrl || fallbackLogo}
           alt="Logo"
           width={64}
           height={64}
