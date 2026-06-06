@@ -191,23 +191,6 @@ function EditorialHero({
 
   return (
     <section className="relative min-h-[calc(100svh-2.5rem)] overflow-hidden bg-stone-950 text-white sm:min-h-[calc(100svh-3rem)]">
-      <div className="absolute inset-0 bg-black">
-        {accordionPhotos.map((photo, index) => (
-          <div
-            key={`hero-bg-${photo.id}`}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-[var(--ease-out-expo)] ${
-              index === activeIndex ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <HeroImage
-              photo={photo}
-              priority={index === 0}
-              sizes={HERO_IMAGE_SIZES}
-              heroPosition={photo.hero_position ?? 0}
-            />
-          </div>
-        ))}
-      </div>
       <div className="absolute inset-0 flex bg-transparent">
         {accordionPhotos.map((photo, index) => {
           const isActive = index === activeIndex
