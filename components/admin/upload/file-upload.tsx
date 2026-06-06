@@ -15,7 +15,7 @@ import MultipleFileUpload from '~/components/admin/upload/multiple-file-upload'
 import LivephotoFileUpload from '~/components/admin/upload/livephoto-file-upload'
 
 export default function FileUpload() {
-  const [mode, setMode] = useState('singleton')
+  const [mode, setMode] = useState('multiple')
   const t = useTranslations()
 
   return (

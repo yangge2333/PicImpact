@@ -50,7 +50,7 @@ export interface UploadConfig {
 export function useUploadConfig(): UploadConfig {
   const [openListStorage, setOpenListStorage] = useState<Array<{ mount_path: string }>>([])
   const [storageSelect, setStorageSelect] = useState(false)
-  const [storage, setStorage] = useState('r2')
+  const [storage, setStorage] = useState('s3')
   const [album, setAlbum] = useState('')
   const [openListMountPath, setOpenListMountPath] = useState('')
   const t = useTranslations()
