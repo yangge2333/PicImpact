@@ -70,7 +70,7 @@ export default function AboutSettingsPage() {
             disabled={isValidating || isLoading}
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            className="min-h-[28rem] flex-1 resize-none text-sm leading-6"
+            className="min-h-[28rem] flex-1 resize-none font-mono text-sm leading-6"
             placeholder="# 关于我"
           />
         </div>

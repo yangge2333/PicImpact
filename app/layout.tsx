@@ -1,5 +1,5 @@
 import type { Metadata } from 'next/types'
-import { Inter, Noto_Sans_SC } from 'next/font/google'
+import { Source_Serif_4, Source_Sans_3 } from 'next/font/google'
 
 import { ThemeProvider } from '~/app/providers/next-ui-providers'
 import { ToasterProviders } from '~/app/providers/toaster-providers'
@@ -17,18 +17,18 @@ import Script from 'next/script'
 
 const FALLBACK_LOGO_PATH = '/fallback-logo.jpg'
 
-const inter = Inter({
+const sourceSerif4 = Source_Serif_4({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-display',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '600', '700'],
 })
 
-const notoSansSc = Noto_Sans_SC({
+const sourceSans3 = Source_Sans_3({
   subsets: ['latin'],
-  variable: '--font-noto-sans-sc',
+  variable: '--font-sans',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600'],
 })
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -108,7 +108,7 @@ export default async function RootLayout({
   const icon = info.customFaviconUrl || FALLBACK_LOGO_PATH
 
   return (
-    <html className={`overflow-y-auto scrollbar-hide ${inter.variable} ${notoSansSc.variable}`} lang={locale} suppressHydrationWarning>
+    <html className={`overflow-y-auto scrollbar-hide ${sourceSerif4.variable} ${sourceSans3.variable}`} lang={locale} suppressHydrationWarning>
     <head>
       <link rel="manifest" href="/manifest.json" />
       <meta name="theme-color" content="#2d2518" />
