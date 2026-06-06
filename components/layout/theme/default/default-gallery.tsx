@@ -211,9 +211,7 @@ function EditorialHero({
                 sizes={HERO_IMAGE_SIZES}
                 heroPosition={isActive ? 0 : photo.hero_position ?? 0}
               />
-              <span className={`absolute inset-0 transition-colors duration-700 ${
-                isActive ? 'bg-black/0' : 'bg-black/34 group-hover:bg-black/14'
-              }`} />
+              <span className="absolute inset-0 bg-black/0 transition-colors duration-700" />
               <span className={`absolute bottom-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold uppercase text-white/72 transition-opacity duration-500 xl:block ${
                 isActive ? 'opacity-0' : 'opacity-80'
               }`}>
