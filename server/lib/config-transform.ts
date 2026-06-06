@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type {
+  AboutInfo,
   AdminConfig,
   Config,
   CustomInfo,
@@ -10,6 +11,18 @@ import type {
   S3Info,
 } from '~/types'
 import { normalizeDefaultTheme } from '~/lib/utils/theme'
+
+export const DEFAULT_ABOUT_ME_MARKDOWN = `# 关于我
+
+这里是船长的摄影小屋。
+
+我会在这里放一些拍摄介绍、合作说明和近期计划。
+
+## 联系方式
+
+QQ: 774202796
+
+微信: 13634085297`
 
 // Per-shape mappers that convert the `Config[]` snake_case rows returned by
 // `fetchConfigsByKeys` into the flat camelCase objects exposed by the
@@ -115,6 +128,12 @@ export function toOpenListInfo(configs: Config[]): OpenListInfo {
 export function toAdminConfig(configs: Config[]): AdminConfig {
   return {
     adminImagesPerPage: int(configs, 'admin_images_per_page', 24),
+  }
+}
+
+export function toAboutInfo(configs: Config[]): AboutInfo {
+  return {
+    aboutMeMarkdown: str(configs, 'about_me_markdown', DEFAULT_ABOUT_ME_MARKDOWN),
   }
 }
 

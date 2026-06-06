@@ -32,6 +32,7 @@ import { KeySquareIcon } from '~/components/icons/key-square'
 import { CalendarDaysIcon } from '~/components/icons/calendar-days'
 import { ListTodoIcon } from '~/components/icons/list-todo'
 import { DownloadIcon } from '~/components/icons/download'
+import { UserIcon } from '~/components/icons/user'
 import { AnimatedIconTrigger, mergeAnimatedTriggerProps } from '~/components/icons/animated-trigger'
 
 export function AppSidebar({
@@ -110,6 +111,11 @@ export function AppSidebar({
           name: t('Link.daily'),
           url: '/admin/settings/daily',
           icon: CalendarDaysIcon,
+        },
+        {
+          name: '关于我',
+          url: '/admin/settings/about',
+          icon: UserIcon,
         },
         {
           name: t('Link.backup'),

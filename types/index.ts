@@ -116,6 +116,10 @@ export type AdminConfig = {
   adminImagesPerPage: number
 }
 
+export type AboutInfo = {
+  aboutMeMarkdown: string
+}
+
 export type DailyConfig = {
   dailyEnabled: boolean
   dailyRefreshInterval: string

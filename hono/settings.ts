@@ -2,15 +2,16 @@ import 'server-only'
 
 import { fetchConfigsByKeys } from '~/server/db/query/configs'
 import { Hono } from 'hono'
-import { updateOpenListConfig, updateCustomInfo, updateR2Config, updateS3Config } from '~/server/db/operate/configs'
+import { updateAboutInfo, updateOpenListConfig, updateCustomInfo, updateR2Config, updateS3Config } from '~/server/db/operate/configs'
 import { normalizeDefaultTheme } from '~/lib/utils/theme'
 import {
   toAdminConfig,
+  toAboutInfo,
   toCustomInfo,
   toR2Info,
   toS3Info,
 } from '~/server/lib/config-transform'
-import type { CustomInfo, OpenListInfo, R2Info, S3Info } from '~/types'
+import type { AboutInfo, CustomInfo, OpenListInfo, R2Info, S3Info } from '~/types'
 import { ok, okEmpty } from '~/hono/_lib/response'
 import { serverError } from '~/hono/_lib/errors'
 
@@ -94,6 +95,15 @@ app.get('/admin-config', async (c) => {
   }
 })
 
+app.get('/about-info', async (c) => {
+  try {
+    const rows = await fetchConfigsByKeys(['about_me_markdown'])
+    return ok(c, toAboutInfo(rows))
+  } catch (error) {
+    throw serverError('Failed to fetch about info', error)
+  }
+})
+
 app.put('/open-list-info', async (c) => {
   try {
     const body = await c.req.json<OpenListInfo>()
@@ -133,6 +143,18 @@ app.put('/custom-info', async (c) => {
     await updateCustomInfo({
       ...body,
       defaultTheme: normalizeDefaultTheme(body.defaultTheme),
+    })
+    return okEmpty(c)
+  } catch (e) {
+    throw serverError('Failed', e)
+  }
+})
+
+app.put('/about-info', async (c) => {
+  try {
+    const body = await c.req.json<AboutInfo>()
+    await updateAboutInfo({
+      aboutMeMarkdown: body.aboutMeMarkdown ?? '',
     })
     return okEmpty(c)
   } catch (e) {

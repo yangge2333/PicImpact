@@ -120,12 +120,6 @@ function EditorialHero({
   const [slideColors, setSlideColors] = useState<string[]>(HERO_FALLBACK_COLORS)
   const primary = accordionPhotos[activeIndex % accordionPhotos.length]
   const featuredTitle = title || '船长的摄影小屋'
-  const activeColor = slideColors[activeIndex % slideColors.length] || HERO_FALLBACK_COLORS[0]
-  const panelStyle = {
-    background: `linear-gradient(135deg, ${hexToRgba(activeColor, 0.08)} 0%, rgba(18, 18, 18, 0.1) 54%, rgba(255, 255, 255, 0.04) 100%)`,
-    borderColor: hexToRgba(activeColor, 0.2),
-    boxShadow: `0 20px 66px ${hexToRgba(activeColor, 0.1)}`,
-  }
   const channelLabels = [
     { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
     { name: '场照', detail: '活动现场纪实', href: '/changzhao' },
@@ -282,30 +276,28 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/52 via-background/22 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/28 via-background/8 to-transparent" />
       <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1.5 pb-1.5 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
         <div
-          className="pointer-events-auto relative w-full max-w-none overflow-hidden border px-3.5 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.18)] backdrop-blur-[8px] sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
-          style={panelStyle}
+          className="pointer-events-auto relative w-full max-w-none overflow-visible px-3.5 py-3 sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
         >
-          <p className="font-hero-cinzel mb-2 text-[8px] font-semibold uppercase text-white/68 sm:mb-4 sm:text-[10px]">
-            Featured Gallery
-          </p>
-          <h1 className="font-hero-title text-[clamp(1.75rem,8vw,2.45rem)] font-semibold leading-[1.04] tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)] sm:text-[clamp(2.1rem,3.35vw,3.65rem)]">
-            {featuredTitle}
-          </h1>
-          <p className="mt-2 max-w-[34rem] text-[11px] leading-[1.55] text-white/78 sm:mt-4 sm:text-sm sm:leading-6">
-            {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
-          </p>
-          <p className="mt-1.5 text-[10px] leading-4 text-white/66 sm:mt-2 sm:text-sm sm:leading-5">
-            联系方式 QQ: 774202796 WX: 13634085297
-          </p>
-          <div className="mt-3 grid w-full max-w-none grid-cols-3 gap-1.5 sm:mt-6 sm:max-w-[26rem] sm:gap-2.5">
+          <div className="w-fit max-w-full bg-[linear-gradient(35deg,rgba(0,0,0,0.24)_0%,rgba(0,0,0,0.1)_46%,rgba(0,0,0,0)_100%)] pb-5 pr-10 pt-2 sm:pb-6 sm:pr-16">
+            <p className="font-hero-cinzel mb-2 text-[8px] font-semibold uppercase text-white/62 sm:mb-4 sm:text-[10px]">
+              Featured Gallery
+            </p>
+            <h1 className="font-hero-title text-[clamp(1.75rem,8vw,2.45rem)] font-semibold leading-[1.04] tracking-[0.12em] text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.34)] sm:text-[clamp(2.1rem,3.35vw,3.65rem)]">
+              {featuredTitle}
+            </h1>
+            <p className="mt-2 max-w-[34rem] text-[9px] uppercase leading-[1.7] tracking-[0.08em] text-[#999] sm:mt-4 sm:text-[11px] sm:leading-6">
+              {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
+            </p>
+          </div>
+          <div className="mt-1 grid w-full max-w-none grid-cols-3 gap-1.5 sm:mt-2 sm:max-w-[26rem] sm:gap-2.5">
             {channelLabels.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="relative min-h-[3.7rem] overflow-hidden border border-white/16 bg-white/6 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.1)] backdrop-blur-[4px] transition-colors hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
+                className="relative min-h-[3.7rem] overflow-hidden border border-white/18 bg-black/10 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.1)] backdrop-blur-[3px] transition-colors hover:bg-black/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
               >
                 <span className="font-hero-title block text-[1.14rem] font-semibold leading-none tracking-normal sm:text-[clamp(1.18rem,1.7vw,1.55rem)]">
                   {item.name}

@@ -3,7 +3,7 @@
 import { db } from '~/server/lib/db'
 import { revalidateConfigCache } from '~/server/lib/cache'
 import { normalizeDefaultTheme } from '~/lib/utils/theme'
-import type { CustomInfo, R2Info, S3Info, OpenListInfo } from '~/types'
+import type { AboutInfo, CustomInfo, R2Info, S3Info, OpenListInfo } from '~/types'
 
 const toBoolString = (value: boolean | string | undefined | null): string => {
   if (typeof value === 'boolean') return value ? 'true' : 'false'
@@ -128,6 +128,23 @@ export async function updateCustomInfo(payload: CustomInfo) {
   }
 
   const result = await db.$transaction(updates)
+  revalidateConfigCache()
+  return result
+}
+
+export async function updateAboutInfo(payload: AboutInfo) {
+  const result = await db.configs.upsert({
+    where: { config_key: 'about_me_markdown' },
+    update: {
+      config_value: payload.aboutMeMarkdown ?? '',
+      updatedAt: new Date(),
+    },
+    create: {
+      config_key: 'about_me_markdown',
+      config_value: payload.aboutMeMarkdown ?? '',
+      detail: '关于我页面 Markdown 内容',
+    },
+  })
   revalidateConfigCache()
   return result
 }

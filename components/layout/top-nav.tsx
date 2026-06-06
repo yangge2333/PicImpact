@@ -93,6 +93,12 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
 
           {/* Right: Icon buttons */}
           <div className="flex items-center gap-1 shrink-0">
+            <Link
+              href="/about"
+              className="px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-2"
+            >
+              关于我
+            </Link>
             <button
               type="button"
               onClick={() => router.push('/map')}

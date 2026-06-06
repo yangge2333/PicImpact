@@ -43,6 +43,7 @@ const INITIAL_CONFIGS = [
   { config_key: 'daily_refresh_interval', config_value: '24', detail: 'Daily 首页刷新间隔（小时）：6/12/24/168' },
   { config_key: 'daily_total_count', config_value: '30', detail: 'Daily 首页展示照片总数' },
   { config_key: 'daily_last_refresh', config_value: '', detail: 'Daily 首页上次刷新时间' },
+  { config_key: 'about_me_markdown', config_value: '# 关于我\n\n这里是船长的摄影小屋。\n\n我会在这里放一些拍摄介绍、合作说明和近期计划。\n\n## 联系方式\n\nQQ: 774202796\n\n微信: 13634085297', detail: '关于我页面 Markdown 内容' },
 ]
 
 export async function main() {
