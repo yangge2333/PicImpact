@@ -277,7 +277,7 @@ function EditorialHero({
         })}
       </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/28 via-background/8 to-transparent" />
-      <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1.5 pb-1.5 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
+      <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1 pb-1 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-6 sm:pb-8 sm:pt-20 md:pb-10 lg:px-10 lg:pb-12">
         <div
           className="pointer-events-auto relative w-full max-w-none overflow-visible px-3.5 py-3 sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
         >
