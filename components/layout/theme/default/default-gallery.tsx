@@ -18,7 +18,6 @@ import { ArrowUp } from 'lucide-react'
 // How many leading items load eagerly (priority) rather than lazily. Sized to
 // the widest column count (xl = 5) so the first visible row is always eager,
 const LCP_EAGER_COUNT = 5
-const HERO_PHOTO_COUNT = 5
 const HERO_ROTATION_INTERVAL_MS = 3500
 const HERO_IMAGE_SIZES = '(max-width: 768px) 100vw, 1920px'
 const HERO_FALLBACK_COLORS = ['#7c4f3a', '#8aa6a0', '#9e6688', '#b8a044', '#9a6f86']
@@ -114,7 +113,7 @@ function EditorialHero({
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const accordionPhotos = useMemo(
-    () => photos.slice(0, Math.min(photos.length, HERO_PHOTO_COUNT)),
+    () => photos,
     [photos]
   )
   const [slideColors, setSlideColors] = useState<string[]>(HERO_FALLBACK_COLORS)
@@ -224,7 +223,7 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 items-center gap-2 rounded-b-2xl border border-t-0 border-white/18 bg-black/16 px-3 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] backdrop-blur-md sm:gap-2.5">
+      <div className="scrollbar-hide absolute left-1/2 top-0 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto rounded-b-2xl border border-t-0 border-white/18 bg-black/16 px-3 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] backdrop-blur-md sm:gap-2.5">
         {accordionPhotos.map((photo, index) => {
           const color = slideColors[index] || HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
           const isActive = index === activeIndex
@@ -363,16 +362,21 @@ export default function DefaultGallery(props : Readonly<ImageHandleProps>) {
   })
   // Memoize dataList to avoid unnecessary recalculations
   const dataList = useMemo(() => data?.flat() ?? [], [data])
-  const heroPhotos = useMemo(() => dataList.slice(0, HERO_PHOTO_COUNT), [dataList])
   const showHero = props.showHero ?? false
   const showInitialSkeleton = dataList.length === 0 && isValidating
   const isPaginating = isValidating && dataList.length > 0
   const t = useTranslations()
 
-  if (showHero && heroPhotos.length > 0) {
+  useEffect(() => {
+    if (showHero && pageTotal && size < pageTotal) {
+      setSize(pageTotal)
+    }
+  }, [pageTotal, setSize, showHero, size])
+
+  if (showHero && dataList.length > 0) {
     return (
       <EditorialHero
-        photos={heroPhotos}
+        photos={dataList}
         title={configData?.customTitle}
       />
     )

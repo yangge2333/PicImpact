@@ -421,8 +421,13 @@ export default function ListProps(props : Readonly<ImageServerHandleProps>) {
           />
         ) : Array.isArray(data) && data?.map((image: ImageType) => (
           <Card key={image.id} className="flex flex-col h-72 show-up-motion items-center gap-0 py-0">
-            <div className="flex h-12 justify-between w-full p-2 space-x-2">
+            <div className="relative flex h-12 justify-between w-full p-2 space-x-2">
               <Badge variant="secondary" aria-label={t('Words.album')}>{image.album_name}</Badge>
+              {image.show_on_mainpage === 0 && (
+                <Badge className="absolute left-1/2 top-2 -translate-x-1/2 border-rose-500 bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(225,29,72,0.35)]">
+                  首页
+                </Badge>
+              )}
               <div className="flex items-center">
                 <Button
                   variant="outline"
