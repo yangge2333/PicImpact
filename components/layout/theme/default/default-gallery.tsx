@@ -283,9 +283,9 @@ function EditorialHero({
         })}
       </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1.5 pb-1.5 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
+      <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1.5 pb-1.5 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
         <div
-          className="relative w-full max-w-none overflow-hidden border px-3.5 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
+          className="pointer-events-auto relative w-full max-w-none overflow-hidden border px-3.5 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
           style={panelStyle}
         >
           <p className="font-hero-cinzel mb-2 text-[8px] font-semibold uppercase text-white/68 sm:mb-4 sm:text-[10px]">
