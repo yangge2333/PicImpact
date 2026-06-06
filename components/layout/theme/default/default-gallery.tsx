@@ -122,9 +122,9 @@ function EditorialHero({
   const featuredTitle = title || '船长的摄影小屋'
   const activeColor = slideColors[activeIndex % slideColors.length] || HERO_FALLBACK_COLORS[0]
   const panelStyle = {
-    background: `linear-gradient(135deg, ${hexToRgba(activeColor, 0.03)} 0%, rgba(18, 18, 18, 0.04) 54%, rgba(255, 255, 255, 0.02) 100%)`,
-    borderColor: hexToRgba(activeColor, 0.16),
-    boxShadow: `0 18px 58px ${hexToRgba(activeColor, 0.08)}`,
+    background: `linear-gradient(135deg, ${hexToRgba(activeColor, 0.08)} 0%, rgba(18, 18, 18, 0.1) 54%, rgba(255, 255, 255, 0.04) 100%)`,
+    borderColor: hexToRgba(activeColor, 0.2),
+    boxShadow: `0 20px 66px ${hexToRgba(activeColor, 0.1)}`,
   }
   const channelLabels = [
     { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
@@ -282,10 +282,10 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/38 via-background/12 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/52 via-background/22 to-transparent" />
       <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1.5 pb-1.5 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
         <div
-          className="pointer-events-auto relative w-full max-w-none overflow-hidden border px-3.5 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.14)] backdrop-blur-[2px] sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
+          className="pointer-events-auto relative w-full max-w-none overflow-hidden border px-3.5 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.18)] backdrop-blur-[8px] sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
           style={panelStyle}
         >
           <p className="font-hero-cinzel mb-2 text-[8px] font-semibold uppercase text-white/68 sm:mb-4 sm:text-[10px]">
@@ -305,7 +305,7 @@ function EditorialHero({
               <Link
                 key={item.name}
                 href={item.href}
-                className="relative min-h-[3.7rem] overflow-hidden border border-white/14 bg-white/3 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.08)] backdrop-blur-[1px] transition-colors hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
+                className="relative min-h-[3.7rem] overflow-hidden border border-white/16 bg-white/6 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.1)] backdrop-blur-[4px] transition-colors hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
               >
                 <span className="font-hero-title block text-[1.14rem] font-semibold leading-none tracking-normal sm:text-[clamp(1.18rem,1.7vw,1.55rem)]">
                   {item.name}
