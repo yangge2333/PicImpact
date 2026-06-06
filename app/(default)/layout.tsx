@@ -32,7 +32,7 @@ export default async function DefaultLayout({
   return (
     <>
       <TopNav {...props} />
-      <main id="main-content" className="pt-14">
+      <main id="main-content" className="pt-10">
         <PageTransition>{children}</PageTransition>
       </main>
     </>

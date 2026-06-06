@@ -31,7 +31,7 @@ export default async function MapLayout({
   return (
     <>
       <TopNav {...props} />
-      <main className="overflow-hidden pt-12">{children}</main>
+      <main className="overflow-hidden pt-10">{children}</main>
     </>
   )
 }

@@ -32,7 +32,7 @@ export default async function ThemeAlbumLayout({
   return (
     <>
       <TopNav {...props} />
-      <main className="pt-14">{children}</main>
+      <main className="pt-10">{children}</main>
     </>
   )
 }
