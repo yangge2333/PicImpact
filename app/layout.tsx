@@ -126,6 +126,27 @@ export default async function RootLayout({
             <ProgressBarProviders>
               {children}
               {modal}
+              <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-50 flex justify-center px-3 text-[10px] leading-5 text-foreground/45">
+                <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-x-2 rounded-full bg-background/35 px-3 backdrop-blur-sm">
+                  <a
+                    href="https://beian.miit.gov.cn/#/Integrated/index"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="transition-colors hover:text-foreground/70"
+                  >
+                    浙ICP备2023039220号-1
+                  </a>
+                  <span aria-hidden="true">|</span>
+                  <a
+                    href="https://github.com/yangge2333/PicImpact"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="transition-colors hover:text-foreground/70"
+                  >
+                    Powered by PicImpact
+                  </a>
+                </div>
+              </footer>
             </ProgressBarProviders>
           </ThemeProvider>
         </ButtonStoreProvider>
