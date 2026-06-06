@@ -67,7 +67,7 @@ export default function MasonryPhotoItem({
           src={previewSrc}
           key="preview"
           className={cn(
-            'object-cover transition duration-700 ease-[var(--ease-out-quart)] group-hover:scale-[1.025] group-hover:brightness-[0.82]',
+            'object-cover transition duration-700 ease-[var(--ease-out-quart)] group-hover:scale-[1.025]',
             isLoading && !hasRealBlurhash && 'animate-pulse'
           )}
           alt={photo.detail || photo.title || ''}
@@ -89,7 +89,6 @@ export default function MasonryPhotoItem({
       ) : (
         <Skeleton className="absolute inset-0 rounded-none bg-stone-200/80 dark:bg-white/10" />
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/58 via-black/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 text-white">
         <h3 className="truncate font-display text-xl font-medium tracking-normal opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 translate-y-2">
           {photo.title}

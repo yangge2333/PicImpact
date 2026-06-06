@@ -122,9 +122,9 @@ function EditorialHero({
   const featuredTitle = title || '船长的摄影小屋'
   const activeColor = slideColors[activeIndex % slideColors.length] || HERO_FALLBACK_COLORS[0]
   const panelStyle = {
-    background: `linear-gradient(135deg, ${hexToRgba(activeColor, 0.42)} 0%, rgba(18, 18, 18, 0.58) 54%, rgba(255, 255, 255, 0.12) 100%)`,
-    borderColor: hexToRgba(activeColor, 0.36),
-    boxShadow: `0 22px 80px ${hexToRgba(activeColor, 0.22)}`,
+    background: `linear-gradient(135deg, ${hexToRgba(activeColor, 0.1)} 0%, rgba(18, 18, 18, 0.12) 54%, rgba(255, 255, 255, 0.05) 100%)`,
+    borderColor: hexToRgba(activeColor, 0.22),
+    boxShadow: `0 22px 80px ${hexToRgba(activeColor, 0.12)}`,
   }
   const channelLabels = [
     { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
