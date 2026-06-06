@@ -8,7 +8,7 @@ import useSWR from 'swr'
 import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
 import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { FastAverageColor } from 'fast-average-color'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
@@ -112,6 +112,7 @@ function EditorialHero({
   title?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const accordionPhotos = useMemo(
     () => photos,
     [photos]
@@ -135,6 +136,12 @@ function EditorialHero({
       return
     }
     setActiveIndex(index)
+  }
+  const handleSwipeSlide = (direction: 1 | -1) => {
+    if (accordionPhotos.length <= 1) {
+      return
+    }
+    setActiveIndex((index) => (index + direction + accordionPhotos.length) % accordionPhotos.length)
   }
 
   useEffect(() => {
@@ -190,7 +197,38 @@ function EditorialHero({
 
   return (
     <section className="relative min-h-[calc(100svh-2.5rem)] overflow-hidden bg-stone-950 text-white sm:min-h-[calc(100svh-3rem)]">
-      <div className="absolute inset-0 flex bg-transparent">
+      <div
+        className="absolute inset-0 flex bg-transparent"
+        onClick={(event) => {
+          const target = event.target instanceof HTMLElement
+            ? event.target.closest<HTMLElement>('[data-hero-slide-index]')
+            : null
+          const index = Number(target?.dataset.heroSlideIndex)
+          if (Number.isInteger(index)) {
+            handleSelectSlide(index)
+          }
+        }}
+        onTouchStart={(event) => {
+          const touch = event.touches[0]
+          if (touch) {
+            touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+          }
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStartRef.current
+          const touch = event.changedTouches[0]
+          touchStartRef.current = null
+          if (!start || !touch) {
+            return
+          }
+          const deltaX = touch.clientX - start.x
+          const deltaY = touch.clientY - start.y
+          if (Math.abs(deltaX) < 42 || Math.abs(deltaX) < Math.abs(deltaY) * 1.35) {
+            return
+          }
+          handleSwipeSlide(deltaX < 0 ? 1 : -1)
+        }}
+      >
         {accordionPhotos.map((photo, index) => {
           const isActive = index === activeIndex
           return (
@@ -199,6 +237,7 @@ function EditorialHero({
               type="button"
               aria-label={`Show image ${index + 1}`}
               data-active={isActive}
+              data-hero-slide-index={index}
               className={`hero-accordion-slide group relative h-full min-w-0 appearance-none overflow-hidden border-0 border-r border-white/10 p-0 text-left transition-[flex,opacity] duration-700 ease-[var(--ease-out-expo)] last:border-r-0 ${
                 isActive ? 'flex-[5.8]' : 'flex-[0.72] hover:flex-[1.15]'
               }`}
@@ -221,7 +260,7 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="scrollbar-hide absolute left-1/2 top-0 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto rounded-b-2xl border border-t-0 border-white/18 bg-black/16 px-3 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] backdrop-blur-md sm:gap-2.5">
+      <div className="scrollbar-hide absolute left-1/2 top-0 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto px-3 py-2 sm:gap-2.5">
         {accordionPhotos.map((photo, index) => {
           const color = slideColors[index] || HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
           const isActive = index === activeIndex
