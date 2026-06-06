@@ -14,6 +14,7 @@ export async function insertImage(image: ImageType) {
   if (!image.sort || image.sort < 0) {
     image.sort = 0
   }
+  const heroPosition = Math.max(-100, Math.min(100, Number(image.hero_position) || 0))
   await db.$transaction(async (tx) => {
     const resultRow = await tx.images.create({
       data: {
@@ -34,6 +35,7 @@ export async function insertImage(image: ImageType) {
         type: image.type,
         show: 1,
         sort: image.sort,
+        hero_position: heroPosition,
         del: 0,
       }
     })
@@ -113,6 +115,7 @@ export async function updateImage(image: ImageType) {
   if (!image.sort || image.sort < 0) {
     image.sort = 0
   }
+  const heroPosition = Math.max(-100, Math.min(100, Number(image.hero_position) || 0))
   await db.$transaction(async (tx) => {
     await tx.images.update({
       where: {
@@ -128,6 +131,7 @@ export async function updateImage(image: ImageType) {
         labels: image.labels,
         detail: image.detail,
         sort: image.sort,
+        hero_position: heroPosition,
         show: image.show,
         show_on_mainpage: image.show_on_mainpage,
         width: image.width,

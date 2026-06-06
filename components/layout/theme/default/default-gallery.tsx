@@ -9,6 +9,7 @@ import { useSwrHydrated } from '~/hooks/use-swr-hydrated.ts'
 import { useTranslations } from 'next-intl'
 import type { GalleryDisplayConfig, ImageType } from '~/types'
 import { useState, useEffect, useMemo } from 'react'
+import { FastAverageColor } from 'fast-average-color'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
@@ -20,6 +21,7 @@ const LCP_EAGER_COUNT = 5
 const HERO_PHOTO_COUNT = 5
 const HERO_ROTATION_INTERVAL_MS = 3500
 const HERO_IMAGE_SIZES = '(max-width: 768px) 100vw, 1920px'
+const HERO_FALLBACK_COLORS = ['#7c4f3a', '#8aa6a0', '#9e6688', '#b8a044', '#9a6f86']
 
 const MASONRY_SKELETON_RATIOS = [
   '4 / 5',
@@ -35,6 +37,18 @@ const MASONRY_SKELETON_RATIOS = [
   '3 / 4',
   '4 / 5',
 ]
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '')
+  const value = normalized.length === 3
+    ? normalized.split('').map((part) => `${part}${part}`).join('')
+    : normalized.padEnd(6, '0').slice(0, 6)
+  const red = Number.parseInt(value.slice(0, 2), 16)
+  const green = Number.parseInt(value.slice(2, 4), 16)
+  const blue = Number.parseInt(value.slice(4, 6), 16)
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+}
 
 function MasonrySkeletonGrid() {
   return (
@@ -61,10 +75,12 @@ function HeroImage({
   photo,
   priority = false,
   sizes = HERO_IMAGE_SIZES,
+  heroPosition = 0,
 }: {
   photo?: ImageType
   priority?: boolean
   sizes?: string
+  heroPosition?: number
 }) {
   if (!photo) {
     return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
@@ -84,6 +100,7 @@ function HeroImage({
       sizes={sizes}
       unoptimized
       className="object-cover"
+      style={{ objectPosition: `${Math.max(0, Math.min(100, 50 + heroPosition / 2))}% center` }}
     />
   )
 }
@@ -96,11 +113,19 @@ function EditorialHero({
   title?: string
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const safePhotos = photos.length > 0 ? photos : []
-  const primary = safePhotos[activeIndex % safePhotos.length]
-  const accordionPhotos = safePhotos.slice(0, Math.min(safePhotos.length, HERO_PHOTO_COUNT))
+  const accordionPhotos = useMemo(
+    () => photos.slice(0, Math.min(photos.length, HERO_PHOTO_COUNT)),
+    [photos]
+  )
+  const [slideColors, setSlideColors] = useState<string[]>(HERO_FALLBACK_COLORS)
+  const primary = accordionPhotos[activeIndex % accordionPhotos.length]
   const featuredTitle = title || '船长的摄影小屋'
+  const activeColor = slideColors[activeIndex % slideColors.length] || HERO_FALLBACK_COLORS[0]
+  const panelStyle = {
+    background: `linear-gradient(135deg, ${hexToRgba(activeColor, 0.42)} 0%, rgba(18, 18, 18, 0.58) 54%, rgba(255, 255, 255, 0.12) 100%)`,
+    borderColor: hexToRgba(activeColor, 0.36),
+    boxShadow: `0 22px 80px ${hexToRgba(activeColor, 0.22)}`,
+  }
   const channelLabels = [
     { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
     { name: '场照', detail: '活动现场纪实', href: '/changzhao' },
@@ -115,36 +140,75 @@ function EditorialHero({
 
   useEffect(() => {
     if (accordionPhotos.length <= 1) {
-      setProgress(100)
       return
     }
 
-    let animationFrame = 0
-    let startedAt = window.performance.now()
+    const timer = window.setTimeout(() => {
+      setActiveIndex((index) => (index + 1) % accordionPhotos.length)
+    }, HERO_ROTATION_INTERVAL_MS)
 
-    const updateProgress = (timestamp: number) => {
-      const nextProgress = ((timestamp - startedAt) / HERO_ROTATION_INTERVAL_MS) * 100
-
-      if (nextProgress >= 100) {
-        setProgress(0)
-        setActiveIndex((index) => (index + 1) % accordionPhotos.length)
-        startedAt = timestamp
-      } else {
-        setProgress(nextProgress)
-      }
-
-      animationFrame = window.requestAnimationFrame(updateProgress)
-    }
-
-    setProgress(0)
-    animationFrame = window.requestAnimationFrame(updateProgress)
-
-    return () => window.cancelAnimationFrame(animationFrame)
+    return () => window.clearTimeout(timer)
   }, [accordionPhotos.length, activeIndex])
+
+  useEffect(() => {
+    let cancelled = false
+    const fac = new FastAverageColor()
+
+    Promise.all(
+      accordionPhotos.map(async (photo, index) => {
+        if (!photo.preview_url) {
+          return HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
+        }
+
+        try {
+          const color = await fac.getColorAsync(photo.preview_url, {
+            algorithm: 'dominant',
+            mode: 'speed',
+            crossOrigin: 'anonymous',
+            ignoredColor: [
+              [255, 255, 255, 70, 20],
+              [0, 0, 0, 70, 20],
+            ],
+            silent: true,
+          })
+
+          return color.hex || HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
+        } catch {
+          return HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
+        }
+      })
+    ).then((colors) => {
+      if (!cancelled) {
+        setSlideColors(colors.length > 0 ? colors : HERO_FALLBACK_COLORS)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      fac.destroy()
+    }
+  }, [accordionPhotos])
 
   return (
     <section className="relative min-h-[calc(100svh-2.5rem)] overflow-hidden bg-stone-950 text-white sm:min-h-[calc(100svh-3rem)]">
-      <div className="absolute inset-0 flex bg-black">
+      <div className="absolute inset-0 bg-black">
+        {accordionPhotos.map((photo, index) => (
+          <div
+            key={`hero-bg-${photo.id}`}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-[var(--ease-out-expo)] ${
+              index === activeIndex ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <HeroImage
+              photo={photo}
+              priority={index === 0}
+              sizes={HERO_IMAGE_SIZES}
+              heroPosition={photo.hero_position ?? 0}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="absolute inset-0 flex bg-transparent">
         {accordionPhotos.map((photo, index) => {
           const isActive = index === activeIndex
           return (
@@ -159,11 +223,14 @@ function EditorialHero({
               onClick={() => handleSelectSlide(index)}
               onFocus={() => handleSelectSlide(index)}
             >
-              <HeroImage
-                photo={photo}
-                priority
-                sizes={HERO_IMAGE_SIZES}
-              />
+              {!isActive && (
+                <HeroImage
+                  photo={photo}
+                  priority={index === 0}
+                  sizes={HERO_IMAGE_SIZES}
+                  heroPosition={photo.hero_position ?? 0}
+                />
+              )}
               <span className={`absolute inset-0 transition-colors duration-700 ${
                 isActive ? 'bg-black/0' : 'bg-black/34 group-hover:bg-black/14'
               }`} />
@@ -176,25 +243,44 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute left-1/2 top-11 z-20 h-[4px] w-[46vw] -translate-x-1/2 overflow-hidden rounded-full border border-white/55 bg-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm sm:top-16 sm:h-[5px] sm:w-44">
-        <span
-          className="block h-full rounded-full bg-white transition-[width] duration-100 ease-linear"
-          style={{ width: `${Math.min(progress, 100)}%` }}
-        />
+      <div className="absolute left-1/2 top-11 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/18 bg-black/16 px-2.5 py-1.5 shadow-[0_10px_34px_rgba(0,0,0,0.18)] backdrop-blur-md sm:top-16 sm:gap-2.5">
+        {accordionPhotos.map((photo, index) => {
+          const color = slideColors[index] || HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
+          const isActive = index === activeIndex
+
+          return (
+            <button
+              key={`hero-indicator-${photo.id}`}
+              type="button"
+              aria-label={`Show featured image ${index + 1}`}
+              className={`block border border-white/65 transition-all duration-500 ease-[var(--ease-out-expo)] ${
+                isActive ? 'h-5 w-4 shadow-[0_0_22px_rgba(255,255,255,0.26)]' : 'h-2.5 w-2.5 opacity-80 hover:opacity-100'
+              }`}
+              style={{
+                backgroundColor: color,
+                boxShadow: isActive ? `0 0 24px ${hexToRgba(color, 0.5)}` : undefined,
+              }}
+              onClick={() => handleSelectSlide(index)}
+            />
+          )
+        })}
       </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/88 via-background/48 to-transparent" />
-      <div className="relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-2 pb-2 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
-        <div className="relative w-full max-w-none overflow-hidden border border-white/12 bg-black/30 px-3 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-md sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5">
-          <p className="mb-2 text-[9px] font-semibold uppercase text-white/64 sm:mb-4 sm:text-[10px]">
+      <div className="relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1.5 pb-1.5 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-10 sm:pb-12 sm:pt-20 md:pb-14 lg:px-16 lg:pb-16">
+        <div
+          className="relative w-full max-w-none overflow-hidden border px-3.5 py-3 shadow-[0_20px_76px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
+          style={panelStyle}
+        >
+          <p className="font-hero-cinzel mb-2 text-[8px] font-semibold uppercase text-white/68 sm:mb-4 sm:text-[10px]">
             Featured Gallery
           </p>
-          <h1 className="font-display text-[clamp(1.65rem,7.8vw,2.35rem)] font-semibold leading-[1.03] tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)] sm:text-[clamp(2.1rem,3.35vw,3.65rem)]">
+          <h1 className="font-hero-title text-[clamp(1.75rem,8vw,2.45rem)] font-semibold leading-[1.04] tracking-normal text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.32)] sm:text-[clamp(2.1rem,3.35vw,3.65rem)]">
             {featuredTitle}
           </h1>
-          <p className="mt-2 max-w-[34rem] text-[11px] leading-5 text-white/76 sm:mt-4 sm:text-sm sm:leading-6">
+          <p className="mt-2 max-w-[34rem] text-[11px] leading-[1.55] text-white/78 sm:mt-4 sm:text-sm sm:leading-6">
             {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
           </p>
-          <p className="mt-1.5 text-[11px] leading-4 text-white/68 sm:mt-2 sm:text-sm sm:leading-5">
+          <p className="mt-1.5 text-[10px] leading-4 text-white/66 sm:mt-2 sm:text-sm sm:leading-5">
             联系方式 QQ: 774202796 WX: 13634085297
           </p>
           <div className="mt-3 grid w-full max-w-none grid-cols-3 gap-1.5 sm:mt-6 sm:max-w-[26rem] sm:gap-2.5">
@@ -202,12 +288,12 @@ function EditorialHero({
               <Link
                 key={item.name}
                 href={item.href}
-                className="relative min-h-[4.1rem] overflow-hidden border border-white/20 bg-white/8 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.14)] backdrop-blur-xl transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
+                className="relative min-h-[3.7rem] overflow-hidden border border-white/18 bg-white/8 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.12)] backdrop-blur-xl transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
               >
-                <span className="block font-display text-[1.25rem] font-semibold leading-none tracking-normal sm:text-[clamp(1.18rem,1.7vw,1.55rem)]">
+                <span className="font-hero-title block text-[1.14rem] font-semibold leading-none tracking-normal sm:text-[clamp(1.18rem,1.7vw,1.55rem)]">
                   {item.name}
                 </span>
-                <span className="mt-1.5 block text-[9px] leading-3 text-white/58 sm:mt-2 sm:text-[10px] sm:leading-4">
+                <span className="mt-1.5 block text-[8px] leading-3 text-white/58 sm:mt-2 sm:text-[10px] sm:leading-4">
                   {item.detail}
                 </span>
               </Link>

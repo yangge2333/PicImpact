@@ -100,7 +100,7 @@ export const UserFrom = ({
       const { error } = await authClient.signIn.email({
         email,
         password,
-        callbackURL: '/',
+        callbackURL: '/admin',
       }, {
         onSuccess(ctx) {
           if (ctx.data.twoFactorRedirect) {
