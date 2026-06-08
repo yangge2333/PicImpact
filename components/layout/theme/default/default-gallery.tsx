@@ -189,7 +189,7 @@ function EditorialHero({
   }, [accordionPhotos])
 
   return (
-    <section className="relative min-h-[calc(100svh-2.5rem)] overflow-hidden bg-stone-950 text-white sm:min-h-[calc(100svh-3rem)]">
+    <section className="relative -mt-10 min-h-[100svh] overflow-hidden bg-stone-950 text-white">
       <div
         className="absolute inset-0 flex bg-transparent"
         onClick={(event) => {
@@ -276,11 +276,11 @@ function EditorialHero({
         })}
       </div>
       <div className="absolute inset-x-0 bottom-0 z-[3] h-[42svh] bg-transparent sm:h-[38svh]" />
-      <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-8 sm:pb-10 sm:pt-20 md:pb-12 lg:px-14 lg:pb-14">
+      <div className="pointer-events-none relative z-10 flex min-h-[100svh] items-end px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14 sm:px-8 sm:pb-8 sm:pt-20 md:pb-8 lg:px-14 lg:pb-7">
         <div
           className="pointer-events-auto relative w-full max-w-[min(48rem,calc(100vw-2rem))] overflow-visible"
         >
-          <div className="w-fit max-w-full bg-[linear-gradient(35deg,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.08)_42%,rgba(0,0,0,0)_100%)] pb-5 pr-10 pt-2 sm:pb-6 sm:pr-16">
+          <div className="w-fit max-w-full pb-5 pr-10 pt-2 sm:pb-6 sm:pr-16">
             <p className="font-hero-cinzel mb-2 text-[8px] font-medium uppercase tracking-[0.14em] text-white/52 sm:mb-3 sm:text-[9px]">
               Featured Gallery
             </p>
@@ -300,8 +300,8 @@ function EditorialHero({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`group relative min-h-[3.45rem] overflow-hidden rounded-[1.15rem] border px-2.5 py-2.5 text-left text-white shadow-[0_8px_22px_rgba(255,255,255,0.045)] backdrop-blur-[14px] transition-[background-color,border-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-white/[0.24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.15rem] sm:rounded-[1.25rem] sm:px-3.5 sm:py-3 ${
-                    isActive ? 'border-white/55 bg-white/[0.22]' : 'border-white/35 bg-white/[0.18]'
+                  className={`group relative min-h-[3.35rem] overflow-hidden rounded-xl border px-2.5 py-2.5 text-left text-white shadow-[0_8px_20px_rgba(255,255,255,0.035)] backdrop-blur-[12px] transition-[background-color,border-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-white/[0.18] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4rem] sm:rounded-[0.9rem] sm:px-3.5 sm:py-3 ${
+                    isActive ? 'border-white/42 bg-white/[0.15]' : 'border-white/28 bg-white/[0.11]'
                   }`}
                 >
                   <span className="flex items-start gap-2 sm:gap-3">

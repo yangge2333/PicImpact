@@ -49,21 +49,20 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-2.5 pt-2 sm:px-4">
-        <nav className="pointer-events-auto relative mx-auto flex h-11 max-w-[calc(100vw-1.25rem)] items-center justify-between overflow-hidden rounded-[1.35rem] border border-white/42 bg-white/[0.22] px-3 text-foreground shadow-[0_10px_34px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-[18px] backdrop-saturate-150 dark:border-white/24 dark:bg-black/[0.16] sm:h-12 sm:max-w-[calc(100vw-2rem)] sm:rounded-[1.5rem] sm:px-4 lg:px-5">
-          <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.4)_0%,rgba(255,255,255,0.16)_36%,rgba(255,255,255,0.06)_72%,rgba(255,255,255,0.24)_100%)] opacity-70" />
-          <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-white/70" />
+      <header className="fixed inset-x-0 top-0 z-50 h-10">
+        <div className="absolute inset-0 bg-white/[0.08] backdrop-blur-[14px] backdrop-saturate-150 dark:bg-black/[0.08]" />
+        <nav className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6">
           {/* Left: Site logo/name */}
           <Link
             href="/"
-            className="relative shrink-0 font-display text-sm font-semibold tracking-normal text-foreground/88 transition-opacity hover:opacity-70"
+            className="shrink-0 font-display text-sm font-semibold tracking-normal text-foreground/88 transition-opacity hover:opacity-70"
           >
             {props.title || 'PicImpact'}
           </Link>
 
           {/* Center: Album tabs */}
           {showAlbumTabs && (
-            <div className="scrollbar-hide relative mx-4 flex items-center gap-1 overflow-x-auto">
+            <div className="scrollbar-hide mx-4 flex items-center gap-1 overflow-x-auto">
               <Link
                 href="/"
                 className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
@@ -93,7 +92,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
           )}
 
           {/* Right: Icon buttons */}
-          <div className="relative flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Link
               href="/about"
               className="px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-2"
