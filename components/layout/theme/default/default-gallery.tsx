@@ -13,7 +13,7 @@ import { FastAverageColor } from 'fast-average-color'
 import MasonryPhotoItem from '~/components/gallery/masonry-photo-item'
 import InfiniteScroll from '~/components/ui/origin/infinite-scroll.tsx'
 import { Skeleton } from '~/components/ui/skeleton'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, Camera, ImageIcon, Plane } from 'lucide-react'
 
 // How many leading items load eagerly (priority) rather than lazily. Sized to
 // the widest column count (xl = 5) so the first visible row is always eager,
@@ -118,12 +118,11 @@ function EditorialHero({
     [photos]
   )
   const [slideColors, setSlideColors] = useState<string[]>(HERO_FALLBACK_COLORS)
-  const primary = accordionPhotos[activeIndex % accordionPhotos.length]
   const featuredTitle = title || '船长的摄影小屋'
   const channelLabels = [
-    { name: '正片', detail: '精选成片作品集', href: '/zhengpian' },
-    { name: '场照', detail: '活动现场纪实', href: '/changzhao' },
-    { name: '旅拍', detail: '旅途与目的地影像', href: '/lvpai' },
+    { name: '正片', detail: '精选成片', href: '/zhengpian', icon: ImageIcon },
+    { name: '场照', detail: '现场纪实', href: '/changzhao', icon: Camera },
+    { name: '旅拍', detail: '旅途影像', href: '/lvpai', icon: Plane },
   ]
   const handleSelectSlide = (index: number) => {
     if (index === activeIndex) {
@@ -276,37 +275,52 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-t from-background/28 via-background/8 to-transparent" />
-      <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-1 pb-1 pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-6 sm:pb-8 sm:pt-20 md:pb-10 lg:px-10 lg:pb-12">
+      <div className="absolute inset-x-0 bottom-0 z-[3] h-[42svh] bg-gradient-to-t from-black/22 via-black/8 to-transparent sm:h-[38svh]" />
+      <div className="pointer-events-none relative z-10 flex min-h-[calc(100svh-2.5rem)] items-end px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14 sm:min-h-[calc(100svh-3rem)] sm:px-8 sm:pb-10 sm:pt-20 md:pb-12 lg:px-14 lg:pb-14">
         <div
-          className="pointer-events-auto relative w-full max-w-none overflow-visible px-3.5 py-3 sm:max-w-[min(40rem,calc(100vw-2.5rem))] sm:px-6 sm:py-5"
+          className="pointer-events-auto relative w-full max-w-[min(48rem,calc(100vw-2rem))] overflow-visible"
         >
-          <div className="w-fit max-w-full bg-[linear-gradient(35deg,rgba(0,0,0,0.24)_0%,rgba(0,0,0,0.1)_46%,rgba(0,0,0,0)_100%)] pb-5 pr-10 pt-2 sm:pb-6 sm:pr-16">
-            <p className="font-hero-cinzel mb-2 text-[8px] font-semibold uppercase text-white/62 sm:mb-4 sm:text-[10px]">
+          <div className="w-fit max-w-full bg-[linear-gradient(35deg,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.08)_42%,rgba(0,0,0,0)_100%)] pb-5 pr-10 pt-2 sm:pb-6 sm:pr-16">
+            <p className="font-hero-cinzel mb-2 text-[8px] font-medium uppercase tracking-[0.14em] text-white/52 sm:mb-3 sm:text-[9px]">
               Featured Gallery
             </p>
-            <h1 className="font-hero-title text-[clamp(1.75rem,8vw,2.45rem)] font-semibold leading-[1.04] tracking-[0.12em] text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.34)] sm:text-[clamp(2.1rem,3.35vw,3.65rem)]">
+            <h1 className="font-hero-title text-[clamp(2rem,9vw,2.85rem)] font-medium leading-[1.05] tracking-[0.08em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.28)] sm:text-[clamp(2.45rem,3.6vw,4.05rem)]">
               {featuredTitle}
             </h1>
-            <p className="mt-2 max-w-[34rem] text-[9px] uppercase leading-[1.7] tracking-[0.08em] text-[#999] sm:mt-4 sm:text-[11px] sm:leading-6">
-              {primary?.detail || 'A cinematic collection of portraits, travel frames, and quiet fragments of light.'}
+            <p className="mt-3 max-w-[34rem] text-[11px] leading-relaxed tracking-[0.08em] text-white/58 sm:mt-4 sm:text-[13px] sm:leading-6">
+              光影的诗意栖居，定格每一刻心动与宁静。
             </p>
           </div>
-          <div className="mt-1 grid w-full max-w-none grid-cols-3 gap-1.5 sm:mt-2 sm:max-w-[26rem] sm:gap-2.5">
-            {channelLabels.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="relative min-h-[3.7rem] overflow-hidden border border-white/18 bg-black/10 px-3 py-2.5 text-left text-white shadow-[0_14px_44px_rgba(0,0,0,0.1)] backdrop-blur-[3px] transition-colors hover:bg-black/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.75rem] sm:px-4 sm:py-3.5"
-              >
-                <span className="font-hero-title block text-[1.14rem] font-semibold leading-none tracking-normal sm:text-[clamp(1.18rem,1.7vw,1.55rem)]">
-                  {item.name}
-                </span>
-                <span className="mt-1.5 block text-[8px] leading-3 text-white/58 sm:mt-2 sm:text-[10px] sm:leading-4">
-                  {item.detail}
-                </span>
-              </Link>
-            ))}
+          <div className="mt-1 grid w-full grid-cols-3 gap-2.5 sm:mt-3 sm:max-w-[36rem] sm:gap-3.5 md:max-w-[40rem]">
+            {channelLabels.map((item) => {
+              const Icon = item.icon
+              const isActive = item.name === '正片'
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group relative min-h-[4.25rem] overflow-hidden rounded-[1.25rem] border px-3 py-3 text-left text-white shadow-[0_10px_28px_rgba(255,255,255,0.06)] backdrop-blur-[14px] transition-[background-color,border-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-white/[0.24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[5rem] sm:rounded-[1.35rem] sm:px-4 sm:py-3.5 ${
+                    isActive ? 'border-white/55 bg-white/[0.22]' : 'border-white/35 bg-white/[0.18]'
+                  }`}
+                >
+                  <span className="flex items-start gap-2 sm:gap-3">
+                    <Icon className="mt-0.5 size-4 shrink-0 text-white/62 transition-colors group-hover:text-white/76 sm:size-5" strokeWidth={1.55} />
+                    <span className="min-w-0">
+                      <span className="font-hero-title block text-[1.05rem] font-medium leading-none tracking-[0.06em] sm:text-[1.45rem]">
+                        {item.name}
+                      </span>
+                      <span className="mt-1.5 block text-[9px] leading-3 text-white/65 sm:mt-2 sm:text-[11px] sm:leading-4">
+                        {item.detail}
+                      </span>
+                    </span>
+                  </span>
+                  {isActive ? (
+                    <span className="absolute bottom-2.5 left-1/2 h-[2px] w-9 -translate-x-1/2 rounded-full bg-white/78 sm:left-5 sm:translate-x-0" />
+                  ) : null}
+                </Link>
+              )
+            })}
           </div>
         </div>
       </div>
