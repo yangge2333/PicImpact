@@ -126,7 +126,7 @@ export default async function RootLayout({
             <ProgressBarProviders>
               {children}
               {modal}
-              <footer className="pointer-events-none fixed right-5 top-16 z-40 hidden text-[10px] leading-none text-white/46 drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] lg:flex">
+              <footer className="pointer-events-none fixed right-5 top-11 z-40 hidden text-[10px] leading-none text-white/46 drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] lg:flex">
                 <div className="pointer-events-auto flex items-center gap-x-2 whitespace-nowrap">
                   <a
                     href="https://beian.miit.gov.cn/#/Integrated/index"
