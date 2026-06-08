@@ -48,14 +48,8 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 h-10">
-        <div className="absolute inset-0 bg-transparent" />
-        <nav
-          className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6"
-          style={{
-            WebkitTextStroke: '0.22px rgba(255,255,255,0.72)',
-            textShadow: '0 0 1px rgba(255,255,255,0.9), 0 1px 8px rgba(255,255,255,0.28)',
-          }}
-        >
+        <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-white/34 via-white/18 to-transparent backdrop-blur-[14px] backdrop-saturate-150 dark:from-black/34 dark:via-black/18" />
+        <nav className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6">
           {/* Left: Site logo/name */}
           <Link
             href="/"
