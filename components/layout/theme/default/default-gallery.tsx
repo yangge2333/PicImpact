@@ -253,7 +253,7 @@ function EditorialHero({
           )
         })}
       </div>
-      <div className="scrollbar-hide absolute left-1/2 top-0 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto px-3 py-2 sm:gap-2.5">
+      <div className="scrollbar-hide absolute left-1/2 top-11 z-[60] flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto px-3 py-2 sm:top-12 sm:gap-2.5">
         {accordionPhotos.map((photo, index) => {
           const color = slideColors[index] || HERO_FALLBACK_COLORS[index % HERO_FALLBACK_COLORS.length]
           const isActive = index === activeIndex

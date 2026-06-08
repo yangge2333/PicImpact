@@ -50,7 +50,8 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 h-10">
-        <div className="absolute inset-0 bg-white/[0.08] backdrop-blur-[14px] backdrop-saturate-150 dark:bg-black/[0.08]" />
+        <div className="absolute inset-0 bg-white/[0.28] backdrop-blur-[18px] backdrop-saturate-150 dark:bg-black/[0.26]" />
+        <div className="pointer-events-none absolute inset-x-0 top-full h-8 bg-gradient-to-b from-white/[0.22] to-transparent dark:from-black/[0.2]" />
         <nav className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6">
           {/* Left: Site logo/name */}
           <Link
