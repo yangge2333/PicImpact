@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next-nprogress-bar'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useEffect } from 'react'
@@ -11,10 +10,9 @@ import type { AlbumType } from '~/types'
 import { useIsHydrated } from '~/hooks/use-is-hydrated'
 import Link from 'next/link'
 import Command from '~/components/layout/command'
-import { MapPin, Search, Sun, Moon, SunMoon } from 'lucide-react'
+import { Search, Sun, Moon, SunMoon } from 'lucide-react'
 
 export default function TopNav(props: Readonly<AlbumDataProps>) {
-  const router = useRouter()
   const pathname = usePathname()
   const t = useTranslations()
   const { resolvedTheme, setTheme } = useTheme()
@@ -51,7 +49,13 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
     <>
       <header className="fixed inset-x-0 top-0 z-50 h-10">
         <div className="absolute inset-0 bg-transparent" />
-        <nav className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6">
+        <nav
+          className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6"
+          style={{
+            WebkitTextStroke: '0.22px rgba(255,255,255,0.72)',
+            textShadow: '0 0 1px rgba(255,255,255,0.9), 0 1px 8px rgba(255,255,255,0.28)',
+          }}
+        >
           {/* Left: Site logo/name */}
           <Link
             href="/"
@@ -99,14 +103,6 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
             >
               关于我
             </Link>
-            <button
-              type="button"
-              onClick={() => router.push('/map')}
-              className="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={t('Link.map')}
-            >
-              <MapPin className="size-4" />
-            </button>
             <button
               type="button"
               onClick={() => setCommand(true)}
