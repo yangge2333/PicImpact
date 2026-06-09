@@ -300,12 +300,12 @@ function EditorialHero({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`group relative min-h-[4rem] overflow-hidden rounded-[1.125rem] border border-white/[0.38] bg-white/[0.16] px-3 py-3 text-left text-white shadow-[0_12px_30px_rgba(12,24,36,0.16),inset_0_1px_0_rgba(255,255,255,0.34)] backdrop-blur-[18px] backdrop-saturate-[1.4] transition-[background-color,border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/50 hover:bg-white/[0.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.7rem] sm:rounded-[1.25rem] sm:px-4 sm:py-3.5 ${
-                    isActive ? 'border-white/65 bg-white/[0.24] shadow-[0_0_24px_rgba(203,232,255,0.32),0_14px_34px_rgba(12,24,36,0.18),inset_0_1px_0_rgba(255,255,255,0.74),inset_0_-18px_34px_rgba(190,224,255,0.16)]' : ''
+                  className={`group relative min-h-[4rem] overflow-hidden rounded-[1.125rem] border border-white/[0.38] bg-white/[0.16] px-3 py-3 text-left text-white shadow-[0_12px_30px_rgba(12,24,36,0.16),inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-[18px] backdrop-saturate-[1.4] transition-[background-color,border-color,box-shadow,transform] duration-300 hover:-translate-y-1 hover:border-white/70 hover:bg-white/[0.28] hover:shadow-[0_0_28px_rgba(218,238,255,0.42),0_16px_36px_rgba(12,24,36,0.2),inset_0_1px_0_rgba(255,255,255,0.72),inset_0_-18px_34px_rgba(190,224,255,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.7rem] sm:rounded-[1.25rem] sm:px-4 sm:py-3.5 ${
+                    isActive ? 'border-white/65 bg-white/[0.24] shadow-[0_0_24px_rgba(203,232,255,0.32),0_14px_34px_rgba(12,24,36,0.18),inset_0_1px_0_rgba(255,255,255,0.68),inset_0_-18px_34px_rgba(190,224,255,0.16)]' : ''
                   }`}
                 >
-                  <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/70" />
-                  <span className="flex items-center gap-2.5 sm:gap-3.5">
+                  <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.34),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.16),rgba(255,255,255,0.04)_48%,rgba(255,255,255,0.12))] opacity-65 transition-opacity duration-300 group-hover:opacity-100" />
+                  <span className="relative flex items-center gap-2.5 sm:gap-3.5">
                     <Icon className="size-5 shrink-0 text-white/90 drop-shadow-[0_1px_6px_rgba(255,255,255,0.2)] transition-colors group-hover:text-white sm:size-6" strokeWidth={1.45} />
                     <span className="min-w-0">
                       <span className="font-hero-title block text-[1.08rem] font-medium leading-none tracking-[0.04em] text-white drop-shadow-[0_1px_10px_rgba(0,0,0,0.22)] sm:text-[1.45rem]">
