@@ -74,6 +74,11 @@ export function AppSidebar({
         icon: ListTodoIcon,
       },
       {
+        title: '访问统计',
+        url: '/admin/visits',
+        icon: CalendarDaysIcon,
+      },
+      {
         title: t('Link.about'),
         url: '/admin/about',
         icon: GithubIcon,

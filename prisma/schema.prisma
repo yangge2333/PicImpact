@@ -198,3 +198,16 @@ model AdminTaskRun {
   @@index([status])
   @@map("admin_task_runs")
 }
+
+model VisitLog {
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  ip        String?  @db.VarChar(100)
+  path      String   @db.Text
+  userAgent String?  @map("user_agent") @db.Text
+  referer   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+
+  @@index([createdAt])
+  @@index([ip])
+  @@map("visit_logs")
+}

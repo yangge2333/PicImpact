@@ -3,6 +3,7 @@ import { toCustomInfo } from '~/server/lib/config-transform'
 import type { AlbumType } from '~/types'
 import type { AlbumDataProps } from '~/types/props'
 import TopNav from '~/components/layout/top-nav'
+import { VisitTracker } from '~/components/analytics/visit-tracker'
 
 export default async function ThemeAlbumLayout({
   children,
@@ -33,6 +34,7 @@ export default async function ThemeAlbumLayout({
     <>
       <TopNav {...props} />
       <main className="pt-10">{children}</main>
+      <VisitTracker />
     </>
   )
 }

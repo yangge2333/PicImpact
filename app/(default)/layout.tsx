@@ -4,6 +4,7 @@ import type { AlbumType } from '~/types'
 import type { AlbumDataProps } from '~/types/props'
 import TopNav from '~/components/layout/top-nav'
 import { PageTransition } from '~/components/layout/page-transition'
+import { VisitTracker } from '~/components/analytics/visit-tracker'
 
 export default async function DefaultLayout({
   children,
@@ -35,6 +36,7 @@ export default async function DefaultLayout({
       <main id="main-content" className="pt-10">
         <PageTransition>{children}</PageTransition>
       </main>
+      <VisitTracker />
     </>
   )
 }

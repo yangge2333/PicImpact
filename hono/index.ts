@@ -8,6 +8,7 @@ import openList from '~/hono/storage/open-list.ts'
 import daily from '~/hono/daily'
 import tasks from '~/hono/tasks'
 import backup from '~/hono/backup'
+import visits from '~/hono/visits'
 import { HTTPException } from 'hono/http-exception'
 import { sessionMiddleware } from '~/hono/_lib/context'
 
@@ -32,5 +33,6 @@ route.route('/storage/open-list', openList)
 route.route('/daily', daily)
 route.route('/tasks', tasks)
 route.route('/backup', backup)
+route.route('/visits', visits)
 
 export default route
