@@ -120,9 +120,9 @@ function EditorialHero({
   const [slideColors, setSlideColors] = useState<string[]>(HERO_FALLBACK_COLORS)
   const featuredTitle = title || '船长的摄影小屋'
   const channelLabels = [
-    { name: '正片', detail: '精选成片', href: '/zhengpian', icon: ImageIcon },
+    { name: '正片', detail: '精选出片', href: '/zhengpian', icon: ImageIcon },
     { name: '场照', detail: '现场纪实', href: '/changzhao', icon: Camera },
-    { name: '旅拍', detail: '旅途影像', href: '/lvpai', icon: Plane },
+    { name: '旅拍', detail: '旅途随拍', href: '/lvpai', icon: Plane },
   ]
   const handleSelectSlide = (index: number) => {
     if (index === activeIndex) {
@@ -291,7 +291,7 @@ function EditorialHero({
               光影的诗意栖居，定格每一刻心动与宁静。
             </p>
           </div>
-          <div className="mt-1 grid w-full max-w-[22.5rem] grid-cols-3 gap-2.5 sm:mt-3 sm:max-w-[31rem] sm:gap-3 md:max-w-[34rem]">
+          <div className="mt-1 grid w-full max-w-[23rem] grid-cols-3 gap-2.5 sm:mt-3 sm:max-w-[34rem] sm:gap-3 md:max-w-[36rem]">
             {channelLabels.map((item) => {
               const Icon = item.icon
               const isActive = item.name === '正片'
@@ -300,17 +300,18 @@ function EditorialHero({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`group relative min-h-[3.35rem] overflow-hidden rounded-xl border px-2.5 py-2.5 text-left text-white shadow-[0_8px_20px_rgba(255,255,255,0.035)] backdrop-blur-[12px] transition-[background-color,border-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-white/[0.18] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4rem] sm:rounded-[0.9rem] sm:px-3.5 sm:py-3 ${
-                    isActive ? 'border-white/42 bg-white/[0.15]' : 'border-white/28 bg-white/[0.11]'
+                  className={`group relative min-h-[4rem] overflow-hidden rounded-[1.125rem] border border-white/[0.38] bg-white/[0.16] px-3 py-3 text-left text-white shadow-[0_12px_30px_rgba(12,24,36,0.16),inset_0_1px_0_rgba(255,255,255,0.34)] backdrop-blur-[18px] backdrop-saturate-[1.4] transition-[background-color,border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/50 hover:bg-white/[0.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-[4.7rem] sm:rounded-[1.25rem] sm:px-4 sm:py-3.5 ${
+                    isActive ? 'border-white/65 bg-white/[0.24] shadow-[0_0_24px_rgba(203,232,255,0.32),0_14px_34px_rgba(12,24,36,0.18),inset_0_1px_0_rgba(255,255,255,0.74),inset_0_-18px_34px_rgba(190,224,255,0.16)]' : ''
                   }`}
                 >
-                  <span className="flex items-start gap-2 sm:gap-3">
-                    <Icon className="mt-0.5 size-3.5 shrink-0 text-white/58 transition-colors group-hover:text-white/72 sm:size-4" strokeWidth={1.55} />
+                  <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-white/70" />
+                  <span className="flex items-center gap-2.5 sm:gap-3.5">
+                    <Icon className="size-5 shrink-0 text-white/90 drop-shadow-[0_1px_6px_rgba(255,255,255,0.2)] transition-colors group-hover:text-white sm:size-6" strokeWidth={1.45} />
                     <span className="min-w-0">
-                      <span className="font-hero-title block text-[0.98rem] font-medium leading-none tracking-[0.06em] sm:text-[1.28rem]">
+                      <span className="font-hero-title block text-[1.08rem] font-medium leading-none tracking-[0.04em] text-white drop-shadow-[0_1px_10px_rgba(0,0,0,0.22)] sm:text-[1.45rem]">
                         {item.name}
                       </span>
-                      <span className="mt-1 block text-[8px] leading-3 text-white/62 sm:mt-1.5 sm:text-[10px] sm:leading-4">
+                      <span className="mt-1.5 block text-[9px] leading-3 text-white/68 sm:text-[11px] sm:leading-4">
                         {item.detail}
                       </span>
                     </span>
