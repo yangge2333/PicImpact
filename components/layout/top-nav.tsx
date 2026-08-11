@@ -10,7 +10,7 @@ import type { AlbumType } from '~/types'
 import { useIsHydrated } from '~/hooks/use-is-hydrated'
 import Link from 'next/link'
 import Command from '~/components/layout/command'
-import { Search, Sun, Moon, SunMoon } from 'lucide-react'
+import { Search, Sun, Moon, SunMoon, Sparkles } from 'lucide-react'
 
 export default function TopNav(props: Readonly<AlbumDataProps>) {
   const pathname = usePathname()
@@ -92,8 +92,23 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
           {/* Right: Icon buttons */}
           <div className="flex shrink-0 items-center gap-1">
             <Link
+              href="/waka-impression"
+              aria-current={pathname === '/waka-impression' ? 'page' : undefined}
+              className={`group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:-translate-y-px hover:shadow-sm sm:px-3 ${
+                pathname === '/waka-impression'
+                  ? 'border-foreground/30 bg-foreground/10 text-foreground shadow-sm'
+                  : 'border-accent-foreground/15 bg-accent/70 text-accent-foreground hover:border-accent-foreground/30 hover:bg-accent'
+              }`}
+            >
+              <Sparkles className="size-3.5 transition-transform duration-300 group-hover:rotate-12" />
+              哇咔印象
+            </Link>
+            <Link
               href="/about"
-              className="px-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-2"
+              aria-current={pathname === '/about' ? 'page' : undefined}
+              className={`px-1.5 py-1 text-xs font-medium transition-colors hover:text-foreground sm:px-2 ${
+                pathname === '/about' ? 'text-foreground' : 'text-muted-foreground'
+              }`}
             >
               关于我
             </Link>
