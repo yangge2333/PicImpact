@@ -33,6 +33,21 @@ function normalizeContactType(value: unknown) {
   return CONTACT_TYPES.includes(contactType as (typeof CONTACT_TYPES)[number]) ? contactType : ''
 }
 
+function getClientIp(c: { req: { header: (name: string) => string | undefined } }) {
+  const forwardedFor = c.req.header('x-forwarded-for')
+  const realIp = c.req.header('x-real-ip')
+  return (forwardedFor?.split(',')[0]?.trim() || realIp?.trim() || 'unknown').slice(0, 64)
+}
+
+function getLocalDayRange() {
+  const today = getLocalDateKey()
+  const tomorrow = addDateKeys(today, 1) as string
+  return {
+    start: new Date(`${today}T00:00:00+08:00`),
+    end: new Date(`${tomorrow}T00:00:00+08:00`),
+  }
+}
+
 function getDateRange(fromValue?: string, toValue?: string) {
   const from = fromValue || getLocalDateKey()
   const to = toValue || addDateKeys(from, 30)
@@ -134,6 +149,7 @@ app.post('/', async (c) => {
     const contactValue = asString(body.contactValue)
     const customerName = asString(body.customerName)
     const note = asString(body.note)
+    const ipAddress = getClientIp(c)
 
     if (!dateValue || !contactType || !Number.isInteger(startMinutes) || !Number.isInteger(endMinutes)) {
       throw badRequest('预约信息不完整')
@@ -162,6 +178,13 @@ app.post('/', async (c) => {
     }
 
     const booking = await db.$transaction(async (tx) => {
+      const { start: todayStart, end: tomorrowStart } = getLocalDayRange()
+      const sameDayBooking = await tx.wakaBooking.findFirst({
+        where: { ipAddress, createdAt: { gte: todayStart, lt: tomorrowStart } },
+      })
+      if (sameDayBooking) {
+        throw conflict('这个 IP 今天已经预约过了，请联系管理员：13634085297')
+      }
       const overlapping = await tx.wakaBooking.findFirst({
         where: {
           bookingDate: dateValue,
@@ -181,6 +204,7 @@ app.post('/', async (c) => {
           endMinutes,
           contactType,
           contactValue,
+          ipAddress,
           customerName: customerName || null,
           note: note || null,
           status: 'pending',

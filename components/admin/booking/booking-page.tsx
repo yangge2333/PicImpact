@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, Loader2, Save, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronDown, Loader2, Plus, Save, X } from 'lucide-react'
 
 type Schedule = { weekday: number; enabled: boolean; openMinutes: number; closeMinutes: number }
 type Settings = { id: string; bookingWindowDays: number; slotMinutes: number; schedules: Schedule[] }
@@ -13,6 +13,11 @@ const TIME_OPTIONS = Array.from({ length: 49 }, (_, index) => {
   const minutes = index * 30
   return { minutes, label: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}` }
 })
+const CONTACT_OPTIONS = [
+  { value: 'phone', label: '手机号' },
+  { value: 'wechat', label: '微信号' },
+  { value: 'other', label: '其他方式' },
+]
 
 async function request<T>(url: string, init?: RequestInit) {
   const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } })
@@ -45,6 +50,9 @@ export default function BookingPage() {
   const [workingId, setWorkingId] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createForm, setCreateForm] = useState(() => ({ date: addDays(startOfToday(), 1), startMinutes: 600, endMinutes: 660, contactType: 'phone', contactValue: '', customerName: '', note: '' }))
 
   const visibleBookings = useMemo(() => activeTab === 'pending' ? bookings.filter((booking) => booking.status === 'pending') : bookings, [activeTab, bookings])
 
@@ -104,9 +112,29 @@ export default function BookingPage() {
     }
   }
 
+  async function createReservation(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setCreating(true)
+    setError('')
+    setMessage('')
+    try {
+      const created = await request<Booking>('/api/v1/booking/reservations', { method: 'POST', body: JSON.stringify(createForm) })
+      setBookings((current) => [...current, created].sort((left, right) => `${left.date} ${left.start}`.localeCompare(`${right.date} ${right.start}`)))
+      setCreateForm({ date: addDays(startOfToday(), 1), startMinutes: 600, endMinutes: 660, contactType: 'phone', contactValue: '', customerName: '', note: '' })
+      setShowCreate(false)
+      setMessage('预约记录已添加')
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : '添加失败')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return <div className="relative space-y-6 px-1 py-2 sm:px-2"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Waka Booking</p><h1 className="mt-2 font-display text-3xl text-foreground">预约排班</h1><p className="mt-2 text-sm text-muted-foreground">配置营业时间，处理哇咔印象的预约请求。</p></div><button type="button" onClick={() => void load()} className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-sm hover:bg-accent"><CalendarClock className="size-4" />刷新</button></div>{(error || message) && <div className={`rounded-2xl px-4 py-3 text-sm ${error ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{error || message}</div>}
     <section className="rounded-[1.5rem] border border-border/70 bg-card/70 p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Opening hours</p><h2 className="mt-2 text-xl font-semibold">营业时间</h2></div><label className="flex items-center gap-3 text-sm">可预约天数<input type="number" min={1} max={90} value={settings?.bookingWindowDays || ''} onChange={(event) => setSettings((current) => current ? { ...current, bookingWindowDays: Number(event.target.value) } : current)} className="h-9 w-24 rounded-lg border border-border bg-background px-3" /><span className="text-muted-foreground">天</span></label></div>{loading || !settings ? <div className="flex min-h-36 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在加载设置</div> : <div className="mt-5 space-y-2">{settings.schedules.map((schedule) => <ScheduleRow key={schedule.weekday} schedule={schedule} label={WEEKDAYS[schedule.weekday - 1]} onChange={(patch) => updateSchedule(schedule.weekday, patch)} />)}</div>}<div className="mt-5 flex justify-end"><button type="button" disabled={saving || !settings} onClick={() => void saveSettings()} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50">{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}保存排班设置</button></div></section>
-    <section className="rounded-[1.5rem] border border-border/70 bg-card/70 p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Reservations</p><h2 className="mt-2 text-xl font-semibold">预约记录 <span className="ml-1 text-sm font-normal text-muted-foreground">{bookings.length}</span></h2></div><div className="flex rounded-full border border-border p-1 text-xs"><button type="button" onClick={() => setActiveTab('pending')} className={`rounded-full px-3 py-1.5 ${activeTab === 'pending' ? 'bg-foreground text-background' : 'text-muted-foreground'}`}>待确认 {bookings.filter((booking) => booking.status === 'pending').length}</button><button type="button" onClick={() => setActiveTab('all')} className={`rounded-full px-3 py-1.5 ${activeTab === 'all' ? 'bg-foreground text-background' : 'text-muted-foreground'}`}>全部</button></div></div>{loading ? <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在加载预约</div> : visibleBookings.length === 0 ? <div className="rounded-2xl border border-dashed border-border/80 px-4 py-12 text-center text-sm text-muted-foreground">当前没有预约记录。</div> : <div className="mt-5 space-y-3">{visibleBookings.map((booking) => <BookingRow key={booking.id} booking={booking} working={workingId === booking.id} onUpdate={updateStatus} />)}</div>}</section>
+    <section className="rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Reservations</p><h2 className="mt-2 text-xl font-semibold">预约记录 <span className="ml-1 text-sm font-normal text-muted-foreground">{bookings.length}</span></h2></div><div className="flex flex-wrap items-center gap-2"><div className="flex rounded-xl border border-border p-1 text-xs"><button type="button" onClick={() => setActiveTab('pending')} className={`rounded-lg px-3 py-1.5 ${activeTab === 'pending' ? 'bg-foreground text-background' : 'text-muted-foreground'}`}>待确认 {bookings.filter((booking) => booking.status === 'pending').length}</button><button type="button" onClick={() => setActiveTab('all')} className={`rounded-lg px-3 py-1.5 ${activeTab === 'all' ? 'bg-foreground text-background' : 'text-muted-foreground'}`}>全部</button></div><button type="button" onClick={() => setShowCreate((current) => !current)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-foreground px-3 text-xs font-medium text-background hover:opacity-85"><Plus className="size-3.5" />添加预约</button></div></div>
+      {showCreate && <form onSubmit={createReservation} className="mt-5 rounded-xl border border-border/70 bg-background/60 p-4"><div className="grid gap-3 sm:grid-cols-3"><label className="text-xs text-muted-foreground">预约日期<input required type="date" value={createForm.date} onChange={(event) => setCreateForm((current) => ({ ...current, date: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground" /></label><label className="text-xs text-muted-foreground">开始时间<select value={createForm.startMinutes} onChange={(event) => setCreateForm((current) => ({ ...current, startMinutes: Number(event.target.value) }))} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground">{TIME_OPTIONS.map((option) => <option key={option.minutes} value={option.minutes}>{option.label}</option>)}</select></label><label className="text-xs text-muted-foreground">结束时间<select value={createForm.endMinutes} onChange={(event) => setCreateForm((current) => ({ ...current, endMinutes: Number(event.target.value) }))} className="mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground">{TIME_OPTIONS.map((option) => <option key={option.minutes} value={option.minutes}>{option.label}</option>)}</select></label></div><div className="mt-3 flex flex-wrap gap-2">{CONTACT_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => setCreateForm((current) => ({ ...current, contactType: option.value }))} className={`rounded-lg border px-3 py-1.5 text-xs ${createForm.contactType === option.value ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:bg-accent'}`}>{option.label}</button>)}</div><div className="mt-3 grid gap-3 sm:grid-cols-2"><input required value={createForm.contactValue} onChange={(event) => setCreateForm((current) => ({ ...current, contactValue: event.target.value }))} placeholder="联系方式" className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none" /><input value={createForm.customerName} onChange={(event) => setCreateForm((current) => ({ ...current, customerName: event.target.value }))} placeholder="称呼（可选）" className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none" /></div><textarea value={createForm.note} onChange={(event) => setCreateForm((current) => ({ ...current, note: event.target.value }))} rows={2} placeholder="备注（可选）" className="mt-3 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm outline-none" /><div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setShowCreate(false)} className="h-9 rounded-xl border border-border px-3 text-xs text-muted-foreground hover:bg-accent">取消</button><button type="submit" disabled={creating} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-foreground px-3 text-xs font-medium text-background disabled:opacity-50">{creating && <Loader2 className="size-3.5 animate-spin" />}保存预约</button></div></form>}
+      {loading ? <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在加载预约</div> : visibleBookings.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-12 text-center text-sm text-muted-foreground">当前没有预约记录。</div> : <div className="mt-5 space-y-3">{visibleBookings.map((booking) => <BookingRow key={booking.id} booking={booking} working={workingId === booking.id} onUpdate={updateStatus} />)}</div>}</section>
   </div>
 }
 

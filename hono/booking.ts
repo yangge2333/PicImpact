@@ -1,15 +1,20 @@
 import 'server-only'
 
+import { createId } from '@paralleldrive/cuid2'
+import { Prisma } from '@prisma/client'
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 
 import { badRequest, conflict, notFound, serverError } from '~/hono/_lib/errors'
 import { requireAuth } from '~/hono/_lib/context'
 import { ok } from '~/hono/_lib/response'
 import {
   BOOKING_STATUSES,
+  CONTACT_TYPES,
   addDateKeys,
   getLocalDateKey,
   getOrCreateWakaBookingSettings,
+  getScheduleForDate,
   parseDateKey,
   serializeBooking,
 } from '~/server/booking/waka'
@@ -34,6 +39,15 @@ function parseRange(fromValue?: string, toValue?: string) {
 function asStatus(value: unknown) {
   const status = typeof value === 'string' ? value : ''
   return BOOKING_STATUSES.includes(status as (typeof BOOKING_STATUSES)[number]) ? status : ''
+}
+
+function asString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function asContactType(value: unknown) {
+  const contactType = asString(value)
+  return CONTACT_TYPES.includes(contactType as (typeof CONTACT_TYPES)[number]) ? contactType : ''
 }
 
 function validateScheduleInput(value: unknown) {
@@ -111,10 +125,82 @@ app.put('/settings', async (c) => {
     })
     return ok(c, updated)
   } catch (error) {
-    if (error instanceof Error && error.name === 'HTTPException') {
+    if (error instanceof HTTPException) {
       throw error
     }
     throw serverError('Failed to update booking settings', error)
+  }
+})
+
+app.post('/reservations', async (c) => {
+  try {
+    const body = await c.req.json<Record<string, unknown>>()
+    const date = asString(body.date)
+    const dateValue = parseDateKey(date)
+    const startMinutes = Number(body.startMinutes)
+    const endMinutes = Number(body.endMinutes)
+    const contactType = asContactType(body.contactType)
+    const contactValue = asString(body.contactValue)
+    const customerName = asString(body.customerName)
+    const note = asString(body.note)
+
+    if (!dateValue || !contactType || !Number.isInteger(startMinutes) || !Number.isInteger(endMinutes)) {
+      throw badRequest('预约信息不完整')
+    }
+    if (contactValue.length < 2 || contactValue.length > 120 || customerName.length > 80 || note.length > 1000) {
+      throw badRequest('预约信息长度或联系方式无效')
+    }
+
+    const settings = await getOrCreateWakaBookingSettings()
+    const schedule = getScheduleForDate(settings.schedules, date)
+    if (!schedule?.enabled) {
+      throw badRequest('这一天暂不营业')
+    }
+    if (
+      startMinutes % settings.slotMinutes !== 0 ||
+      endMinutes % settings.slotMinutes !== 0 ||
+      endMinutes <= startMinutes ||
+      startMinutes < schedule.openMinutes ||
+      endMinutes > schedule.closeMinutes
+    ) {
+      throw badRequest('该时间段不可预约')
+    }
+
+    const booking = await db.$transaction(async (tx) => {
+      const overlapping = await tx.wakaBooking.findFirst({
+        where: {
+          bookingDate: dateValue,
+          status: { in: ['pending', 'confirmed'] },
+          startMinutes: { lt: endMinutes },
+          endMinutes: { gt: startMinutes },
+        },
+      })
+      if (overlapping) {
+        throw conflict('所选时间段与已有预约重叠，请重新选择')
+      }
+      return tx.wakaBooking.create({
+        data: {
+          id: createId(),
+          bookingDate: dateValue,
+          startMinutes,
+          endMinutes,
+          contactType,
+          contactValue,
+          customerName: customerName || null,
+          note: note || null,
+          status: 'pending',
+        },
+      })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+    return ok(c, serializeBooking(booking))
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      throw conflict('所选时间段刚刚被占用，请重新选择')
+    }
+    if (error instanceof HTTPException) {
+      throw error
+    }
+    throw serverError('Failed to create reservation', error)
   }
 })
 
@@ -134,7 +220,7 @@ app.get('/reservations', async (c) => {
     })
     return ok(c, bookings.map(serializeBooking))
   } catch (error) {
-    if (error instanceof Error && error.name === 'HTTPException') {
+    if (error instanceof HTTPException) {
       throw error
     }
     throw serverError('Failed to fetch reservations', error)
@@ -172,7 +258,7 @@ app.patch('/reservations/:id/status', async (c) => {
     })
     return ok(c, serializeBooking(booking))
   } catch (error) {
-    if (error instanceof Error && error.name === 'HTTPException') {
+    if (error instanceof HTTPException) {
       throw error
     }
     throw serverError('Failed to update reservation status', error)

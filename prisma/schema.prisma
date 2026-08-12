@@ -243,6 +243,7 @@ model WakaBooking {
   endMinutes   Int      @map("end_minutes") @db.SmallInt
   contactType  String   @map("contact_type") @db.VarChar(20)
   contactValue String   @map("contact_value") @db.VarChar(120)
+  ipAddress    String?  @map("ip_address") @db.VarChar(64)
   customerName String?  @map("customer_name") @db.VarChar(80)
   note         String?  @db.Text
   status       String   @default("pending") @db.VarChar(20)
@@ -252,6 +253,7 @@ model WakaBooking {
   updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp
 
   @@index([bookingDate, status])
+  @@index([ipAddress, createdAt])
   @@index([contactType, contactValue])
   @@map("waka_bookings")
 }
