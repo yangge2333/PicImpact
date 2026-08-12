@@ -11,6 +11,7 @@ import {
   addDateKeys,
   buildSlots,
   getLocalDateKey,
+  getLocalMinutes,
   getOrCreateWakaBookingSettings,
   getOrCreateWakaBookingStudios,
   getScheduleForDate,
@@ -125,18 +126,19 @@ app.get('/availability', async (c) => {
     }
 
     const today = getLocalDateKey()
+    const currentMinutes = getLocalMinutes()
     const days = []
     for (let date = from; date <= to;) {
       const closed = isClosedDate(settings.closedDates, date)
       const schedule = closed ? null : getScheduleForDate(settings.schedules, date)
       const slots = schedule
-        ? buildSlots(schedule, settings.slotMinutes, bookedByDate.get(date) || [])
+        ? buildSlots(schedule, settings.slotMinutes, bookedByDate.get(date) || [], date === today ? currentMinutes : undefined)
         : []
       days.push({
         date,
         weekday: schedule?.weekday || null,
         enabled: Boolean(schedule?.enabled),
-        slots: date <= today ? slots.map((slot) => ({ ...slot, available: false })) : slots,
+        slots: date < today ? slots.map((slot) => ({ ...slot, available: false })) : slots,
       })
       date = addDateKeys(date, 1) as string
     }
@@ -191,8 +193,13 @@ app.post('/', async (c) => {
     if (!studioId || !studios.some((studio) => studio.id === studioId && studio.enabled)) {
       throw badRequest('请选择有效的棚子')
     }
+    const today = getLocalDateKey()
+    const currentMinutes = getLocalMinutes()
     for (const range of ranges) {
       await assertBookableDate(range.date, settings.bookingWindowDays)
+      if (range.date === today && range.startMinutes < currentMinutes) {
+        throw badRequest('今天已开始的时间段不能预约，请选择后续时间')
+      }
       if (isClosedDate(settings.closedDates, range.date)) {
         throw badRequest(`${range.date} 是休息日，暂不营业`)
       }

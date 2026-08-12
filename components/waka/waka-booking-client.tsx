@@ -190,7 +190,7 @@ export function WakaBookingClient() {
   const selectedStart = currentDay?.slots.find((slot) => slot.startMinutes === selectedSelection.startMinutes) || null
   const selectedEndMinutes = selectedSelection.endMinutes
   const selectedRanges = useMemo<SelectedRange[]>(() => days.flatMap((day) => {
-    if (day.date <= today) return []
+    if (day.date < today) return []
     const selection = selections[day.date]
     if (selection?.startMinutes === null || selection?.startMinutes === undefined || selection.endMinutes === null || selection.endMinutes === undefined) return []
     const start = day.slots.find((slot) => slot.startMinutes === selection.startMinutes)
@@ -418,7 +418,7 @@ export function WakaBookingClient() {
                 </div>
                 <Clock3 className="mt-1 size-5 text-muted-foreground" />
               </div>
-              {loading ? <div className="flex min-h-56 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在读取排班</div> : currentDay?.slots.length ? <SlotGroups slots={currentDay.slots} selectedStart={selectedStart} selectedEndMinutes={selectedEndMinutes} readOnly={selectedDate <= today} onSelectStart={(slot) => { updateSelection(selectedDate, { startMinutes: slot.startMinutes, endMinutes: null }); setError('') }} onSelectEnd={(slot) => { updateSelection(selectedDate, { endMinutes: slot.endMinutes }); setError('') }} onMoveStart={(slot) => updateSelection(selectedDate, { startMinutes: slot.startMinutes })} onMoveEnd={(slot) => updateSelection(selectedDate, { endMinutes: slot.endMinutes })} onSelectWholeDay={() => { const first = currentDay.slots[0]; const last = currentDay.slots[currentDay.slots.length - 1]; updateSelection(selectedDate, { startMinutes: first.startMinutes, endMinutes: last.endMinutes }); setError('') }} onResetSelection={() => { updateSelection(selectedDate, { startMinutes: null, endMinutes: null }); setError('') }} /> : <div className="mt-8 rounded-2xl bg-muted/45 px-4 py-10 text-center text-sm text-muted-foreground">这一天没有可预约档期，换一天看看吧。</div>}
+              {loading ? <div className="flex min-h-56 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在读取排班</div> : currentDay?.slots.length ? <SlotGroups slots={currentDay.slots} selectedStart={selectedStart} selectedEndMinutes={selectedEndMinutes} readOnly={selectedDate < today} onSelectStart={(slot) => { updateSelection(selectedDate, { startMinutes: slot.startMinutes, endMinutes: null }); setError('') }} onSelectEnd={(slot) => { updateSelection(selectedDate, { endMinutes: slot.endMinutes }); setError('') }} onMoveStart={(slot) => updateSelection(selectedDate, { startMinutes: slot.startMinutes })} onMoveEnd={(slot) => updateSelection(selectedDate, { endMinutes: slot.endMinutes })} onSelectWholeDay={() => { const first = currentDay.slots[0]; const last = currentDay.slots[currentDay.slots.length - 1]; updateSelection(selectedDate, { startMinutes: first.startMinutes, endMinutes: last.endMinutes }); setError('') }} onResetSelection={() => { updateSelection(selectedDate, { startMinutes: null, endMinutes: null }); setError('') }} /> : <div className="mt-8 rounded-2xl bg-muted/45 px-4 py-10 text-center text-sm text-muted-foreground">这一天没有可预约档期，换一天看看吧。</div>}
             </section>
           </div>
 

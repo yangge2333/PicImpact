@@ -26,6 +26,17 @@ export function getLocalDateKey(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`
 }
 
+export function getLocalMinutes(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: LOCAL_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return Number(values.hour) * 60 + Number(values.minute)
+}
+
 export function parseDateKey(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return null
@@ -133,7 +144,7 @@ export async function getOrCreateWakaBookingSettings() {
 export function isWithinBookingWindow(date: string, bookingWindowDays: number) {
   const today = getLocalDateKey()
   const lastDate = addDateKeys(today, Math.max(bookingWindowDays, 0))
-  return Boolean(lastDate && date > today && date <= lastDate)
+  return Boolean(lastDate && date >= today && date <= lastDate)
 }
 
 export function getScheduleForDate(
@@ -152,6 +163,7 @@ export function buildSlots(
   schedule: { enabled: boolean; openMinutes: number; closeMinutes: number },
   slotMinutes: number,
   bookedRanges: Array<{ startMinutes: number; endMinutes: number }>,
+  minimumStartMinutes?: number,
 ) {
   if (!schedule.enabled) {
     return []
@@ -164,12 +176,13 @@ export function buildSlots(
     startMinutes += slotMinutes
   ) {
     const booked = bookedRanges.some((range) => range.startMinutes < startMinutes + slotMinutes && range.endMinutes > startMinutes)
+    const passed = minimumStartMinutes !== undefined && startMinutes < minimumStartMinutes
     slots.push({
       startMinutes,
       endMinutes: startMinutes + slotMinutes,
       start: formatMinutes(startMinutes),
       end: formatMinutes(startMinutes + slotMinutes),
-      available: !booked,
+      available: !booked && !passed,
       booked,
     })
   }
