@@ -1,6 +1,6 @@
 import { db } from '~/server/lib/db'
 
-export const BOOKING_STATUSES = ['pending', 'confirmed', 'rejected', 'cancelled'] as const
+export const BOOKING_STATUSES = ['payment_pending', 'pending', 'confirmed', 'rejected', 'cancelled'] as const
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 
 export const CONTACT_TYPES = ['phone', 'wechat', 'other'] as const

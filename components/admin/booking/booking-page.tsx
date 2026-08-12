@@ -51,7 +51,7 @@ function initialCreateForm(studioId = ''): CreateForm {
 }
 
 function statusLabel(status: string) {
-  return { pending: '待确认', confirmed: '已确认', rejected: '未通过', cancelled: '已取消' }[status] || status
+  return { payment_pending: '待付款', pending: '待确认', confirmed: '已确认', rejected: '未通过', cancelled: '已取消' }[status] || status
 }
 
 export default function BookingPage() {

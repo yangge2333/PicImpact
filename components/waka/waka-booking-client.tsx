@@ -15,6 +15,7 @@ type Studio = { id: string; name: string }
 type BookingConfig = {
   bookingWindowDays: number
   slotMinutes: number
+  depositAmount: number
   schedules: Schedule[]
   studios: Studio[]
 }
@@ -64,6 +65,21 @@ type Booking = {
   adminNote: string | null
   confirmedAt: string | null
   createdAt: string
+}
+
+type PaymentLaunch = {
+  orderNo: string
+  amount: number
+  expiresAt: string
+  mode: 'page' | 'wap'
+  gateway: string
+  params: Record<string, string>
+}
+
+type PaymentStatus = {
+  orderNo: string
+  status: 'pending' | 'paid' | 'expired'
+  amount: number
 }
 
 type ApiResponse<T> = { code: number; message: string; data: T }
@@ -167,7 +183,7 @@ export function WakaBookingClient() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState<Booking[] | null>(null)
+  const [paymentNotice, setPaymentNotice] = useState<{ status: 'checking' | PaymentStatus['status']; amount?: number } | null>(null)
   const [contactType, setContactType] = useState('phone')
   const [contactValue, setContactValue] = useState('')
   const [customerName, setCustomerName] = useState('')
@@ -202,6 +218,44 @@ export function WakaBookingClient() {
 
   useEffect(() => {
     setCalendarExpanded(window.matchMedia('(min-width: 768px)').matches)
+  }, [])
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    if (searchParams.get('payment') !== 'return') return
+    const orderNoValue = searchParams.get('orderNo') || ''
+    if (!orderNoValue) return
+    const orderNo = orderNoValue
+
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let attempts = 0
+    setPaymentNotice({ status: 'checking' })
+
+    async function pollPaymentStatus() {
+      try {
+        const status = await request<PaymentStatus>(`/api/waka/booking/payment-status?orderNo=${encodeURIComponent(orderNo)}`)
+        if (cancelled) return
+        setPaymentNotice({ status: status.status, amount: status.amount })
+        if (status.status === 'pending' && attempts < 15) {
+          attempts += 1
+          timer = setTimeout(() => void pollPaymentStatus(), 2000)
+        } else {
+          window.history.replaceState(null, '', window.location.pathname)
+        }
+      } catch (statusError) {
+        if (!cancelled) {
+          setPaymentNotice(null)
+          setError(statusError instanceof Error ? statusError.message : '支付结果查询失败')
+        }
+      }
+    }
+
+    void pollPaymentStatus()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
   }, [])
 
   useEffect(() => {
@@ -257,7 +311,6 @@ export function WakaBookingClient() {
   function selectDate(value: string) {
     setSelectedDate(value)
     setVisibleMonth(monthKey(value))
-    setSuccess(null)
     setError('')
   }
 
@@ -265,7 +318,6 @@ export function WakaBookingClient() {
     if (value === studioId) return
     setStudioId(value)
     setSelections({})
-    setSuccess(null)
     setError('')
   }
 
@@ -287,9 +339,8 @@ export function WakaBookingClient() {
     if (!selectedRanges.length) return
     setSubmitting(true)
     setError('')
-    setSuccess(null)
     try {
-      const response = await request<Booking | Booking[]>('/api/waka/booking', {
+      const payment = await request<PaymentLaunch>('/api/waka/booking', {
         method: 'POST',
         body: JSON.stringify({
           studioId,
@@ -300,20 +351,20 @@ export function WakaBookingClient() {
           note,
         }),
       })
-      const bookings = Array.isArray(response) ? response : [response]
-      setSuccess(bookings)
-      setContactValue('')
-      setCustomerName('')
-      setNote('')
-      setSelections((current) => {
-        const next = { ...current }
-        selectedRanges.forEach((range) => { next[range.date] = { startMinutes: null, endMinutes: null } })
-        return next
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = payment.gateway
+      form.acceptCharset = 'UTF-8'
+      form.style.display = 'none'
+      Object.entries(payment.params).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = value
+        form.appendChild(input)
       })
-      const refreshed = await request<{ days: AvailabilityDay[] }>(
-        `/api/waka/booking/availability?studioId=${encodeURIComponent(studioId)}&from=${firstDate}&to=${lastDate}`
-      )
-      setDays(refreshed.days)
+      document.body.appendChild(form)
+      form.submit()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '预约失败，请稍后重试')
     } finally {
@@ -346,7 +397,7 @@ export function WakaBookingClient() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Waka Schedule</p>
           </div>
           <h1 className="mt-3 font-hero-title text-4xl font-semibold leading-tight text-foreground sm:text-5xl">排期</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">按小时选择开始和结束时间，留下联系方式后提交预约，船长确认后会更新状态。</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">按小时选择开始和结束时间，填写联系方式并支付定金后提交预约，船长确认后会更新状态。</p>
         </div>
         <button
           type="button"
@@ -357,6 +408,8 @@ export function WakaBookingClient() {
           {showHistory ? '返回预约' : '查询我的预约'}
         </button>
       </div>
+
+      {paymentNotice && <div className={`rounded-xl px-4 py-3 text-sm ${paymentNotice.status === 'paid' ? 'bg-primary/10 text-primary' : paymentNotice.status === 'expired' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>{paymentNotice.status === 'checking' ? '正在确认支付宝支付结果…' : paymentNotice.status === 'paid' ? `支付宝定金 ¥${paymentNotice.amount?.toFixed(2) || '100.00'} 已支付，预约等待船长确认。` : paymentNotice.status === 'expired' ? '支付未完成，预约占位已释放，请重新选择时间并提交。' : '已返回支付宝，正在等待支付结果确认…'}</div>}
 
       {showHistory ? (
         <HistoryPanel
@@ -428,7 +481,7 @@ export function WakaBookingClient() {
                   <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Your booking</p>
                   <h2 className="mt-2 text-xl font-semibold text-foreground">{selectedRanges.length === 0 ? '请选择一个时间段' : selectedRanges.length === 1 ? '已选择一个时间段' : `已选择 ${selectedRanges.length} 个时间段`}</h2>
                 </div>
-                <p className="text-xs text-muted-foreground">提交后等待船长确认</p>
+                <p className="text-xs text-muted-foreground">支付定金后等待船长确认</p>
               </div>
               <div className="mt-4 flex min-h-7 flex-wrap items-center gap-2">{selectedRanges.length > 0 ? selectedRanges.map((range) => <span key={range.date} className="rounded-lg bg-muted/60 px-3 py-1.5 text-xs text-foreground">{formatDate(range.date)} · {range.start}–{range.end}</span>) : <p className="text-sm text-muted-foreground">请先在右侧选择开始和结束时间。</p>}</div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -439,8 +492,8 @@ export function WakaBookingClient() {
                 {CONTACT_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => setContactType(option.value)} className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${contactType === option.value ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:bg-accent'}`}>{option.label}</button>)}
               </div>
               <label className="mt-4 block text-sm text-foreground">备注（可选）<textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="比如拍摄主题、人数或其他想提前说明的事" className="mt-2 w-full resize-none rounded-xl border border-border bg-background p-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
-              {(error || success) && <div className={`mt-4 rounded-xl px-3 py-3 text-sm ${success ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{success ? `已提交 ${success.length} 天预约，等待船长确认。` : error}</div>}
-              <button type="submit" disabled={submitting || selectedRanges.length === 0} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto">{submitting && <Loader2 className="size-4 animate-spin" />}提交预约</button>
+              {error && <div className="mt-4 rounded-xl bg-destructive/10 px-3 py-3 text-sm text-destructive">{error}</div>}
+              <button type="submit" disabled={submitting || selectedRanges.length === 0} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto">{submitting && <Loader2 className="size-4 animate-spin" />}支付定金 ¥{config?.depositAmount ?? 100} 并提交</button>
             </form>
         </>
       )}
