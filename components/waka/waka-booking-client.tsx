@@ -63,6 +63,7 @@ type Booking = {
 type ApiResponse<T> = { code: number; message: string; data: T }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
+const MIN_BOOKING_MINUTES = 120
 const CONTACT_OPTIONS = [
   { value: 'phone', label: '手机号', placeholder: '请输入手机号' },
   { value: 'wechat', label: '微信号', placeholder: '请输入微信号' },
@@ -179,7 +180,7 @@ export function WakaBookingClient() {
     if (selection?.startMinutes === null || selection?.startMinutes === undefined || selection.endMinutes === null || selection.endMinutes === undefined) return []
     const start = day.slots.find((slot) => slot.startMinutes === selection.startMinutes)
     const end = day.slots.find((slot) => slot.endMinutes === selection.endMinutes)
-    return start && end ? [{ date: day.date, startMinutes: start.startMinutes, endMinutes: end.endMinutes, start: start.start, end: end.end }] : []
+    return start && end && end.endMinutes - start.startMinutes >= MIN_BOOKING_MINUTES ? [{ date: day.date, startMinutes: start.startMinutes, endMinutes: end.endMinutes, start: start.start, end: end.end }] : []
   }), [days, selections, today])
   const currentOption = CONTACT_OPTIONS.find((option) => option.value === contactType) || CONTACT_OPTIONS[0]
   const historyOption = CONTACT_OPTIONS.find((option) => option.value === historyContactType) || CONTACT_OPTIONS[0]
@@ -336,7 +337,6 @@ export function WakaBookingClient() {
                   return value ? (
                     <button key={value} type="button" onClick={() => selectDate(value)} disabled={!selectable} className={`group relative min-h-14 rounded-2xl p-1 text-sm transition-all ${selectedDate === value ? 'bg-foreground text-background shadow-md' : selectable ? 'text-foreground hover:bg-accent' : 'text-muted-foreground/35'}`}>
                       <span className="block pt-1">{parseDateKey(value).getDate()}</span>
-                      <span className={`mt-1 block text-[0.6rem] ${selectedDate === value ? 'text-background/65' : isPast || value === today ? 'text-muted-foreground/60' : selectable ? 'text-primary' : 'text-transparent'}`}>{availableCount ? `${availableCount}档` : '—'}</span>
                     </button>
                   ) : <span key={`empty-${index}`} />
                 })}
@@ -360,16 +360,15 @@ export function WakaBookingClient() {
             </section>
           </div>
 
-          {selectedRanges.length > 0 && (
-            <form onSubmit={submitBooking} className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm sm:p-6">
+          <form onSubmit={submitBooking} className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Your booking</p>
-                  <h2 className="mt-2 text-xl font-semibold text-foreground">已选择 {selectedRanges.length} 天预约</h2>
+                  <h2 className="mt-2 text-xl font-semibold text-foreground">{selectedRanges.length === 0 ? '请选择一个时间段' : selectedRanges.length === 1 ? '已选择一个时间段' : `已选择 ${selectedRanges.length} 个时间段`}</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">提交后等待船长确认</p>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">{selectedRanges.map((range) => <span key={range.date} className="rounded-lg bg-muted/60 px-3 py-1.5 text-xs text-foreground">{formatDate(range.date)} · {range.start}–{range.end}</span>)}</div>
+              <div className="mt-4 flex min-h-7 flex-wrap items-center gap-2">{selectedRanges.length > 0 ? selectedRanges.map((range) => <span key={range.date} className="rounded-lg bg-muted/60 px-3 py-1.5 text-xs text-foreground">{formatDate(range.date)} · {range.start}–{range.end}</span>) : <p className="text-sm text-muted-foreground">请先在右侧选择开始和结束时间。</p>}</div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <label className="text-sm text-foreground">称呼（可选）<input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="怎么称呼你" className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
                 <label className="text-sm text-foreground">联系方式 <span className="text-destructive">*</span><input required value={contactValue} onChange={(event) => setContactValue(event.target.value)} placeholder={currentOption.placeholder} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
@@ -379,9 +378,8 @@ export function WakaBookingClient() {
               </div>
               <label className="mt-4 block text-sm text-foreground">备注（可选）<textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="比如拍摄主题、人数或其他想提前说明的事" className="mt-2 w-full resize-none rounded-xl border border-border bg-background p-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
               {(error || success) && <div className={`mt-4 rounded-xl px-3 py-3 text-sm ${success ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{success ? `已提交 ${success.length} 天预约，等待船长确认。` : error}</div>}
-              <button type="submit" disabled={submitting} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto">{submitting && <Loader2 className="size-4 animate-spin" />}提交预约</button>
+              <button type="submit" disabled={submitting || selectedRanges.length === 0} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto">{submitting && <Loader2 className="size-4 animate-spin" />}提交预约</button>
             </form>
-          )}
         </>
       )}
     </div>
@@ -394,7 +392,7 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
     let expectedStart = selectedStart.startMinutes
     for (const slot of slots.filter((item) => item.startMinutes >= selectedStart.startMinutes)) {
       if (slot.startMinutes !== expectedStart || !slot.available) break
-      endOptions.push(slot)
+      if (slot.endMinutes - selectedStart.startMinutes >= MIN_BOOKING_MINUTES) endOptions.push(slot)
       expectedStart = slot.endMinutes
     }
   }
@@ -402,7 +400,7 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
   const selectedStartMinutes = selectedStart?.startMinutes ?? null
   return <div className="mt-7 space-y-5">
     {readOnly && <div className="rounded-xl bg-muted/45 px-3 py-3 text-sm text-muted-foreground">这是历史排班，仅供查看，不能提交预约。</div>}
-    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div>{selectedStart && <p className="mt-2 text-xs text-muted-foreground">继续点击下方时间格选择结束时间，至少预约 30 分钟。</p>}</div>}
+    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div>{selectedStart && <p className="mt-2 text-xs text-muted-foreground">继续点击下方时间格选择结束时间，至少预约 2 小时。</p>}</div>}
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/70">
       <div className="grid grid-cols-[4.5rem_1fr] border-b border-border/70 bg-muted/25 px-3 py-2 text-xs text-muted-foreground"><span>时间</span><span>{selectedStart ? '点击时间格选择结束时间' : '点击时间格选择开始时间'}</span></div>
       <div className="max-h-[31rem] overflow-y-auto">

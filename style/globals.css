@@ -315,6 +315,13 @@
   stroke: transparent;
 }
 
+/* Keep large surfaces consistent with the compact console controls. */
+[class~="rounded-2xl"],
+[class~="rounded-3xl"],
+[class*="rounded-[1."] {
+  border-radius: var(--radius-lg) !important;
+}
+
 /* property */
 @property --angle {
   syntax: "<angle>";

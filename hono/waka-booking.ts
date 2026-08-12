@@ -13,6 +13,7 @@ import {
   getLocalDateKey,
   getOrCreateWakaBookingSettings,
   getScheduleForDate,
+  isClosedDate,
   isActiveBooking,
   isWithinBookingWindow,
   parseDateKey,
@@ -80,6 +81,7 @@ app.get('/config', async (c) => {
         openMinutes: schedule.openMinutes,
         closeMinutes: schedule.closeMinutes,
       })),
+      closedDates: settings.closedDates.map((closedDate) => closedDate.date.toISOString().slice(0, 10)),
     })
   } catch (error) {
     throw serverError('Failed to fetch booking config', error)
@@ -116,7 +118,8 @@ app.get('/availability', async (c) => {
     const today = getLocalDateKey()
     const days = []
     for (let date = from; date <= to;) {
-      const schedule = getScheduleForDate(settings.schedules, date)
+      const closed = isClosedDate(settings.closedDates, date)
+      const schedule = closed ? null : getScheduleForDate(settings.schedules, date)
       const slots = schedule
         ? buildSlots(schedule, settings.slotMinutes, bookedByDate.get(date) || [])
         : []
@@ -173,6 +176,9 @@ app.post('/', async (c) => {
     const settings = await getOrCreateWakaBookingSettings()
     for (const range of ranges) {
       await assertBookableDate(range.date, settings.bookingWindowDays)
+      if (isClosedDate(settings.closedDates, range.date)) {
+        throw badRequest(`${range.date} 是休息日，暂不营业`)
+      }
       const schedule = getScheduleForDate(settings.schedules, range.date)
       if (!schedule?.enabled) {
         throw badRequest(`${range.date} 暂不营业`)
@@ -180,7 +186,7 @@ app.post('/', async (c) => {
       if (
         range.startMinutes % settings.slotMinutes !== 0 ||
         range.endMinutes % settings.slotMinutes !== 0 ||
-        range.endMinutes <= range.startMinutes ||
+        range.endMinutes - range.startMinutes < 120 ||
         range.startMinutes < schedule.openMinutes ||
         range.endMinutes > schedule.closeMinutes
       ) {
@@ -190,10 +196,10 @@ app.post('/', async (c) => {
 
     const bookings = await db.$transaction(async (tx) => {
       const { start: todayStart, end: tomorrowStart } = getLocalDayRange()
-      const sameDayBooking = await tx.wakaBooking.findFirst({
+      const sameDayBookingCount = await tx.wakaBooking.count({
         where: { ipAddress, createdAt: { gte: todayStart, lt: tomorrowStart } },
       })
-      if (sameDayBooking) {
+      if (sameDayBookingCount >= 10) {
         throw conflict('这个 IP 今天已经预约过了，请联系管理员：13634085297')
       }
       const createdBookings = []

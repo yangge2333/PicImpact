@@ -62,7 +62,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
 
           {/* Center: Album tabs */}
           {showAlbumTabs && (
-            <div className="scrollbar-hide mx-4 flex items-center gap-1 overflow-x-auto">
+            <div className="scrollbar-hide absolute left-1/2 top-1/2 flex max-w-[calc(100%-18rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1 overflow-x-auto">
               {isWakaPage ? (
                 <>
                   <Link

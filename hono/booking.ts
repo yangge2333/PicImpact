@@ -15,6 +15,7 @@ import {
   getLocalDateKey,
   getOrCreateWakaBookingSettings,
   getScheduleForDate,
+  isClosedDate,
   parseDateKey,
   serializeBooking,
 } from '~/server/booking/waka'
@@ -85,6 +86,17 @@ function validateScheduleInput(value: unknown) {
   })
 }
 
+function validateClosedDates(value: unknown) {
+  if (!Array.isArray(value) || value.length > 366) {
+    throw badRequest('指定休息日配置无效')
+  }
+  const dates = value.map((item) => asString(item))
+  if (dates.some((date) => !parseDateKey(date))) {
+    throw badRequest('指定休息日日期无效')
+  }
+  return [...new Set(dates)].sort()
+}
+
 app.get('/settings', async (c) => {
   try {
     const settings = await getOrCreateWakaBookingSettings()
@@ -92,6 +104,7 @@ app.get('/settings', async (c) => {
       bookingWindowDays: settings.bookingWindowDays,
       slotMinutes: settings.slotMinutes,
       schedules: settings.schedules,
+      closedDates: settings.closedDates.map((closedDate) => closedDate.date.toISOString().slice(0, 10)),
     })
   } catch (error) {
     throw serverError('Failed to fetch booking settings', error)
@@ -106,6 +119,7 @@ app.put('/settings', async (c) => {
       throw badRequest('可预约天数必须在 1 到 90 天之间')
     }
     const schedules = validateScheduleInput(body.schedules)
+    const closedDates = body.closedDates === undefined ? null : validateClosedDates(body.closedDates)
     const settings = await getOrCreateWakaBookingSettings()
     const updated = await db.$transaction(async (tx) => {
       await tx.wakaBookingSettings.update({
@@ -118,9 +132,24 @@ app.put('/settings', async (c) => {
           data: schedule,
         })
       }
+      if (closedDates) {
+        await tx.wakaBookingClosedDate.deleteMany({ where: { settingsId: settings.id } })
+        if (closedDates.length > 0) {
+          await tx.wakaBookingClosedDate.createMany({
+            data: closedDates.map((date) => ({
+              id: createId(),
+              settingsId: settings.id,
+              date: parseDateKey(date) as Date,
+            })),
+          })
+        }
+      }
       return tx.wakaBookingSettings.findUniqueOrThrow({
         where: { id: settings.id },
-        include: { schedules: { orderBy: { weekday: 'asc' } } },
+        include: {
+          schedules: { orderBy: { weekday: 'asc' } },
+          closedDates: { orderBy: { date: 'asc' } },
+        },
       })
     })
     return ok(c, updated)
@@ -160,6 +189,9 @@ app.post('/reservations', async (c) => {
 
     const settings = await getOrCreateWakaBookingSettings()
     for (const selection of selections) {
+      if (isClosedDate(settings.closedDates, selection.date)) {
+        throw badRequest(`${selection.date} 是休息日，不能添加预约`)
+      }
       const schedule = getScheduleForDate(settings.schedules, selection.date)
       if (!schedule?.enabled) {
         throw badRequest(`${selection.date} 不营业`)
@@ -167,7 +199,7 @@ app.post('/reservations', async (c) => {
       if (
         selection.startMinutes % settings.slotMinutes !== 0 ||
         selection.endMinutes % settings.slotMinutes !== 0 ||
-        selection.endMinutes <= selection.startMinutes ||
+        selection.endMinutes - selection.startMinutes < 120 ||
         selection.startMinutes < schedule.openMinutes ||
         selection.endMinutes > schedule.closeMinutes
       ) {
@@ -276,6 +308,27 @@ app.patch('/reservations/:id/status', async (c) => {
       throw error
     }
     throw serverError('Failed to update reservation status', error)
+  }
+})
+
+app.delete('/reservations/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    if (!id) {
+      throw badRequest('预约编号无效')
+    }
+
+    const existing = await db.wakaBooking.findUnique({ where: { id } })
+    if (!existing) {
+      throw notFound('预约不存在')
+    }
+    await db.wakaBooking.delete({ where: { id } })
+    return ok(c, { id })
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error
+    }
+    throw serverError('Failed to delete reservation', error)
   }
 })
 

@@ -69,7 +69,10 @@ export function isActiveBooking(status: string) {
 
 export async function getOrCreateWakaBookingSettings() {
   const existing = await db.wakaBookingSettings.findFirst({
-    include: { schedules: { orderBy: { weekday: 'asc' } } },
+    include: {
+      schedules: { orderBy: { weekday: 'asc' } },
+      closedDates: { orderBy: { date: 'asc' } },
+    },
   })
   if (existing) {
     return existing
@@ -91,11 +94,17 @@ export async function getOrCreateWakaBookingSettings() {
           })),
         },
       },
-      include: { schedules: { orderBy: { weekday: 'asc' } } },
+      include: {
+        schedules: { orderBy: { weekday: 'asc' } },
+        closedDates: { orderBy: { date: 'asc' } },
+      },
     })
   } catch (error) {
     const createdByOtherRequest = await db.wakaBookingSettings.findFirst({
-      include: { schedules: { orderBy: { weekday: 'asc' } } },
+      include: {
+        schedules: { orderBy: { weekday: 'asc' } },
+        closedDates: { orderBy: { date: 'asc' } },
+      },
     })
     if (createdByOtherRequest) {
       return createdByOtherRequest
@@ -116,6 +125,10 @@ export function getScheduleForDate(
 ) {
   const weekday = getWeekday(date)
   return schedules.find((schedule) => schedule.weekday === weekday) || null
+}
+
+export function isClosedDate(closedDates: Array<{ date: Date }>, date: string) {
+  return closedDates.some((closedDate) => closedDate.date.toISOString().slice(0, 10) === date)
 }
 
 export function buildSlots(
