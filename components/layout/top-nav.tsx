@@ -92,10 +92,10 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
           {/* Right: Icon buttons */}
           <div className="flex shrink-0 items-center gap-1">
             <Link
-              href="/waka-impression"
-              aria-current={pathname === '/waka-impression' ? 'page' : undefined}
+              href="/waka"
+              aria-current={pathname === '/waka' ? 'page' : undefined}
               className={`group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:-translate-y-px hover:shadow-sm sm:px-3 ${
-                pathname === '/waka-impression'
+                pathname === '/waka'
                   ? 'border-foreground/30 bg-foreground/10 text-foreground shadow-sm'
                   : 'border-accent-foreground/15 bg-accent/70 text-accent-foreground hover:border-accent-foreground/30 hover:bg-accent'
               }`}

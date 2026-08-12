@@ -8,7 +8,7 @@ export async function generateMetadata() {
   const siteTitle = toCustomInfo(rows).customTitle || 'PicImpact'
 
   return {
-    title: `哇咔印象 | ${siteTitle}`,
+    title: `哇咔 | ${siteTitle}`,
   }
 }
 
