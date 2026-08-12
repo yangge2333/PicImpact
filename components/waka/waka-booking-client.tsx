@@ -375,7 +375,7 @@ export function WakaBookingClient() {
                 </div>
                 <Clock3 className="mt-1 size-5 text-muted-foreground" />
               </div>
-              {loading ? <div className="flex min-h-56 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在读取排班</div> : currentDay?.slots.length ? <SlotGroups slots={currentDay.slots} selectedStart={selectedStart} selectedEndMinutes={selectedEndMinutes} readOnly={selectedDate <= today} onSelectStart={(slot) => { updateSelection(selectedDate, { startMinutes: slot.startMinutes, endMinutes: null }); setError('') }} onSelectEnd={(slot) => { updateSelection(selectedDate, { endMinutes: slot.endMinutes }); setError('') }} onSelectWholeDay={() => { const first = currentDay.slots[0]; const last = currentDay.slots[currentDay.slots.length - 1]; updateSelection(selectedDate, { startMinutes: first.startMinutes, endMinutes: last.endMinutes }); setError('') }} onResetSelection={() => { updateSelection(selectedDate, { startMinutes: null, endMinutes: null }); setError('') }} /> : <div className="mt-8 rounded-2xl bg-muted/45 px-4 py-10 text-center text-sm text-muted-foreground">这一天没有可预约档期，换一天看看吧。</div>}
+              {loading ? <div className="flex min-h-56 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在读取排班</div> : currentDay?.slots.length ? <SlotGroups slots={currentDay.slots} selectedStart={selectedStart} selectedEndMinutes={selectedEndMinutes} readOnly={selectedDate <= today} onSelectStart={(slot) => { updateSelection(selectedDate, { startMinutes: slot.startMinutes, endMinutes: null }); setError('') }} onSelectEnd={(slot) => { updateSelection(selectedDate, { endMinutes: slot.endMinutes }); setError('') }} onMoveStart={(slot) => updateSelection(selectedDate, { startMinutes: slot.startMinutes })} onMoveEnd={(slot) => updateSelection(selectedDate, { endMinutes: slot.endMinutes })} onSelectWholeDay={() => { const first = currentDay.slots[0]; const last = currentDay.slots[currentDay.slots.length - 1]; updateSelection(selectedDate, { startMinutes: first.startMinutes, endMinutes: last.endMinutes }); setError('') }} onResetSelection={() => { updateSelection(selectedDate, { startMinutes: null, endMinutes: null }); setError('') }} /> : <div className="mt-8 rounded-2xl bg-muted/45 px-4 py-10 text-center text-sm text-muted-foreground">这一天没有可预约档期，换一天看看吧。</div>}
             </section>
           </div>
 
@@ -405,7 +405,8 @@ export function WakaBookingClient() {
   )
 }
 
-function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSelectStart, onSelectEnd, onSelectWholeDay, onResetSelection }: { slots: Slot[]; selectedStart: Slot | null; selectedEndMinutes: number | null; readOnly: boolean; onSelectStart: (slot: Slot) => void; onSelectEnd: (slot: Slot) => void; onSelectWholeDay: () => void; onResetSelection: () => void }) {
+function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSelectStart, onSelectEnd, onMoveStart, onMoveEnd, onSelectWholeDay, onResetSelection }: { slots: Slot[]; selectedStart: Slot | null; selectedEndMinutes: number | null; readOnly: boolean; onSelectStart: (slot: Slot) => void; onSelectEnd: (slot: Slot) => void; onMoveStart: (slot: Slot) => void; onMoveEnd: (slot: Slot) => void; onSelectWholeDay: () => void; onResetSelection: () => void }) {
+  const [draggingEdge, setDraggingEdge] = useState<'start' | 'end' | null>(null)
   const endOptions: Slot[] = []
   if (selectedStart) {
     let expectedStart = selectedStart.startMinutes
@@ -417,19 +418,50 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
   }
   const allDayAvailable = slots.length > 0 && slots.every((slot) => slot.available)
   const selectedStartMinutes = selectedStart?.startMinutes ?? null
+  const canUseRange = (startMinutes: number, endMinutes: number) => {
+    if (endMinutes - startMinutes < MIN_BOOKING_MINUTES) return false
+    const rangeSlots = slots.filter((slot) => slot.startMinutes >= startMinutes && slot.endMinutes <= endMinutes)
+    return rangeSlots.length > 0 && rangeSlots[0].startMinutes === startMinutes && rangeSlots[rangeSlots.length - 1].endMinutes === endMinutes && rangeSlots.every((slot) => slot.available)
+  }
+
+  useEffect(() => {
+    if (!draggingEdge) return
+    function moveEdge(event: PointerEvent) {
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-slot-start]')
+      const slotStart = target?.dataset.slotStart
+      const slot = slotStart ? slots.find((item) => item.startMinutes === Number(slotStart)) : null
+      if (!slot || !slot.available) return
+      if (draggingEdge === 'start' && selectedEndMinutes !== null && canUseRange(slot.startMinutes, selectedEndMinutes)) {
+        onMoveStart(slot)
+      }
+      if (draggingEdge === 'end' && selectedStartMinutes !== null && canUseRange(selectedStartMinutes, slot.endMinutes)) {
+        onMoveEnd(slot)
+      }
+    }
+    function stopDragging() {
+      setDraggingEdge(null)
+    }
+    window.addEventListener('pointermove', moveEdge)
+    window.addEventListener('pointerup', stopDragging)
+    return () => {
+      window.removeEventListener('pointermove', moveEdge)
+      window.removeEventListener('pointerup', stopDragging)
+    }
+  }, [draggingEdge, onMoveEnd, onMoveStart, selectedEndMinutes, selectedStartMinutes, slots])
+
   return <div className="mt-7 space-y-5">
     {readOnly && <div className="rounded-xl bg-muted/45 px-3 py-3 text-sm text-muted-foreground">这是历史排班，仅供查看，不能提交预约。</div>}
-    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div>{selectedStart && <p className="mt-2 text-xs text-muted-foreground">继续点击下方时间格选择结束时间，至少预约 2 小时。</p>}</div>}
+    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div>{selectedStart && <p className="mt-2 text-xs text-muted-foreground">点击或拖动时间线两端调整开始和结束时间，至少预约 2 小时。</p>}</div>}
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/70">
-      <div className="grid grid-cols-[4.5rem_1fr] border-b border-border/70 bg-muted/25 px-3 py-2 text-xs text-muted-foreground"><span>时间</span><span>{selectedStart ? '点击时间格选择结束时间' : '点击时间格选择开始时间'}</span></div>
+      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border/70 bg-muted/25 px-3 py-2 text-xs text-muted-foreground"><span>时间</span><span>{selectedStart ? '点击时间线选择结束时间' : '点击时间线选择开始时间'}</span><span /></div>
       <div className="max-h-[31rem] overflow-y-auto">
         {slots.map((slot) => {
           const isSelectedStart = selectedStartMinutes === slot.startMinutes
           const isSelectedRange = selectedStartMinutes !== null && selectedEndMinutes !== null && slot.startMinutes >= selectedStartMinutes && slot.endMinutes <= selectedEndMinutes
           const canChooseEnd = Boolean(selectedStart && endOptions.some((option) => option.endMinutes === slot.endMinutes))
           const canChoose = !readOnly && (slot.available || canChooseEnd)
-          return <div key={slot.start} className="grid min-h-12 grid-cols-[4.5rem_1fr] border-b border-border/60 last:border-b-0">
-            <div className="flex items-start justify-end border-r border-border/60 px-3 py-2 text-xs tabular-nums text-muted-foreground">{slot.start}</div>
+          return <div key={slot.start} data-slot-start={slot.startMinutes} className="grid min-h-12 grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border/60 last:border-b-0">
+            <div className="flex items-start justify-end px-3 py-2 text-xs tabular-nums text-muted-foreground">{slot.start}</div>
             <button type="button" disabled={!canChoose} onClick={() => {
               if (!selectedStart) {
                 onSelectStart(slot)
@@ -440,10 +472,12 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
               } else if (canChooseEnd) {
                 onSelectEnd(slot)
               }
-            }} className={`m-1 flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${isSelectedStart ? 'bg-foreground text-background' : isSelectedRange ? 'bg-accent text-accent-foreground' : slot.booked ? 'cursor-not-allowed bg-muted/65 text-muted-foreground/55' : slot.available ? 'text-foreground hover:bg-accent' : 'cursor-not-allowed bg-muted/30 text-muted-foreground/35'}`}>
-              <span>{slot.booked ? '已预约' : isSelectedStart ? '开始时间' : isSelectedRange ? '已选时间段' : slot.available ? '可预约' : '不可预约'}</span>
-              <span className="text-xs tabular-nums opacity-75">{slot.end}</span>
+            }} className={`relative mx-1 flex min-h-10 items-center justify-center px-2 py-2 text-center text-sm transition-colors before:absolute before:left-0 before:right-0 before:top-1/2 before:border-t ${isSelectedStart ? 'before:border-foreground' : isSelectedRange ? 'before:border-accent-foreground/60' : slot.booked ? 'before:border-muted-foreground/25' : slot.available ? 'before:border-border' : 'before:border-border/50'}`}>
+              <span className={`relative z-10 px-2 ${isSelectedStart ? 'bg-foreground text-background' : isSelectedRange ? 'bg-accent text-accent-foreground' : slot.booked ? 'bg-muted text-muted-foreground/55' : slot.available ? 'bg-background text-foreground' : 'bg-muted/30 text-muted-foreground/35'}`}>{slot.booked ? '已预约' : isSelectedStart ? '开始时间' : isSelectedRange ? '已选时间段' : slot.available ? '可预约' : '不可预约'}</span>
+              {!readOnly && isSelectedStart && <span aria-label="拖动开始时间" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); setDraggingEdge('start') }} className="absolute left-0 top-1/2 z-20 size-3 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize touch-none rounded-full bg-foreground ring-2 ring-background" />}
+              {!readOnly && selectedEndMinutes === slot.endMinutes && <span aria-label="拖动结束时间" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); setDraggingEdge('end') }} className="absolute right-0 top-1/2 z-20 size-3 translate-x-1/2 -translate-y-1/2 cursor-ew-resize touch-none rounded-full bg-foreground ring-2 ring-background" />}
             </button>
+            <div className="flex items-start px-3 py-2 text-xs tabular-nums text-muted-foreground">{slot.end}</div>
           </div>
         })}
       </div>
