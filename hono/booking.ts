@@ -245,7 +245,7 @@ app.post('/reservations', async (c) => {
       if (
         selection.startMinutes % settings.slotMinutes !== 0 ||
         selection.endMinutes % settings.slotMinutes !== 0 ||
-        selection.endMinutes - selection.startMinutes < 120 ||
+        selection.endMinutes <= selection.startMinutes ||
         selection.startMinutes < schedule.openMinutes ||
         selection.endMinutes > schedule.closeMinutes
       ) {

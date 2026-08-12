@@ -215,7 +215,7 @@ model VisitLog {
 model WakaBookingSettings {
   id                String                  @id @default(cuid()) @db.VarChar(50)
   bookingWindowDays Int                     @default(90) @map("booking_window_days") @db.SmallInt
-  slotMinutes       Int                     @default(30) @map("slot_minutes") @db.SmallInt
+  slotMinutes       Int                     @default(60) @map("slot_minutes") @db.SmallInt
   createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamp
   updatedAt         DateTime?               @updatedAt @map("updated_at") @db.Timestamp
   schedules         WakaBookingSchedule[]

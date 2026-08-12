@@ -68,7 +68,6 @@ type Booking = {
 type ApiResponse<T> = { code: number; message: string; data: T }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
-const MIN_BOOKING_MINUTES = 120
 const CONTACT_OPTIONS = [
   { value: 'phone', label: '手机号', placeholder: '请输入手机号' },
   { value: 'wechat', label: '微信号', placeholder: '请输入微信号' },
@@ -195,7 +194,7 @@ export function WakaBookingClient() {
     if (selection?.startMinutes === null || selection?.startMinutes === undefined || selection.endMinutes === null || selection.endMinutes === undefined) return []
     const start = day.slots.find((slot) => slot.startMinutes === selection.startMinutes)
     const end = day.slots.find((slot) => slot.endMinutes === selection.endMinutes)
-    return start && end && end.endMinutes - start.startMinutes >= MIN_BOOKING_MINUTES ? [{ date: day.date, startMinutes: start.startMinutes, endMinutes: end.endMinutes, start: start.start, end: end.end }] : []
+    return start && end && end.endMinutes > start.startMinutes ? [{ date: day.date, startMinutes: start.startMinutes, endMinutes: end.endMinutes, start: start.start, end: end.end }] : []
   }), [days, selections, today])
   const currentOption = CONTACT_OPTIONS.find((option) => option.value === contactType) || CONTACT_OPTIONS[0]
   const historyOption = CONTACT_OPTIONS.find((option) => option.value === historyContactType) || CONTACT_OPTIONS[0]
@@ -346,7 +345,7 @@ export function WakaBookingClient() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Waka Schedule</p>
           </div>
           <h1 className="mt-3 font-hero-title text-4xl font-semibold leading-tight text-foreground sm:text-5xl">排期</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">在半小时刻度上选择开始和结束时间，留下联系方式后提交预约，船长确认后会更新状态。</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">按小时选择开始和结束时间，留下联系方式后提交预约，船长确认后会更新状态。</p>
         </div>
         <button
           type="button"
@@ -455,14 +454,14 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
     let expectedStart = selectedStart.startMinutes
     for (const slot of slots.filter((item) => item.startMinutes >= selectedStart.startMinutes)) {
       if (slot.startMinutes !== expectedStart || !slot.available) break
-      if (slot.endMinutes - selectedStart.startMinutes >= MIN_BOOKING_MINUTES) endOptions.push(slot)
+      if (slot.endMinutes > selectedStart.startMinutes) endOptions.push(slot)
       expectedStart = slot.endMinutes
     }
   }
   const allDayAvailable = slots.length > 0 && slots.every((slot) => slot.available)
   const selectedStartMinutes = selectedStart?.startMinutes ?? null
   const canUseRange = (startMinutes: number, endMinutes: number) => {
-    if (endMinutes - startMinutes < MIN_BOOKING_MINUTES) return false
+    if (endMinutes <= startMinutes) return false
     const rangeSlots = slots.filter((slot) => slot.startMinutes >= startMinutes && slot.endMinutes <= endMinutes)
     return rangeSlots.length > 0 && rangeSlots[0].startMinutes === startMinutes && rangeSlots[rangeSlots.length - 1].endMinutes === endMinutes && rangeSlots.every((slot) => slot.available)
   }
@@ -494,7 +493,7 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
 
   return <div className="mt-7 space-y-5">
     {readOnly && <div className="rounded-xl bg-muted/45 px-3 py-3 text-sm text-muted-foreground">这是历史排班，仅供查看，不能提交预约。</div>}
-    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div>{selectedStart && <p className="mt-2 text-xs text-muted-foreground">点击或拖动时间线两端调整开始和结束时间，至少预约 2 小时。</p>}</div>}
+    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div></div>}
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/70">
       <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border/70 bg-muted/25 px-3 py-2 text-xs text-muted-foreground"><span>时间</span><span>{selectedStart ? '点击时间线选择结束时间' : '点击时间线选择开始时间'}</span><span /></div>
       <div className="max-h-[31rem] overflow-y-auto">

@@ -210,7 +210,7 @@ app.post('/', async (c) => {
       if (
         range.startMinutes % settings.slotMinutes !== 0 ||
         range.endMinutes % settings.slotMinutes !== 0 ||
-        range.endMinutes - range.startMinutes < 120 ||
+        range.endMinutes <= range.startMinutes ||
         range.startMinutes < schedule.openMinutes ||
         range.endMinutes > schedule.closeMinutes
       ) {

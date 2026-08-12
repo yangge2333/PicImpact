@@ -7,7 +7,7 @@ export const CONTACT_TYPES = ['phone', 'wechat', 'other'] as const
 export type ContactType = (typeof CONTACT_TYPES)[number]
 
 export const DEFAULT_BOOKING_WINDOW_DAYS = 90
-export const DEFAULT_SLOT_MINUTES = 30
+export const DEFAULT_SLOT_MINUTES = 60
 export const DEFAULT_OPEN_MINUTES = 10 * 60
 export const DEFAULT_CLOSE_MINUTES = 21 * 60
 export const DEFAULT_STUDIO_ID = 'waka-studio-white-1'
