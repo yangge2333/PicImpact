@@ -8,8 +8,9 @@ export type ContactType = (typeof CONTACT_TYPES)[number]
 
 export const DEFAULT_BOOKING_WINDOW_DAYS = 90
 export const DEFAULT_SLOT_MINUTES = 30
-export const DEFAULT_OPEN_MINUTES = 9 * 60
-export const DEFAULT_CLOSE_MINUTES = 18 * 60
+export const DEFAULT_OPEN_MINUTES = 10 * 60
+export const DEFAULT_CLOSE_MINUTES = 21 * 60
+export const DISPLAY_PAST_DAYS = 30
 export const LOCAL_TIME_ZONE = 'Asia/Shanghai'
 
 export function getLocalDateKey(date = new Date()) {
@@ -62,10 +63,6 @@ export function formatMinutes(minutes: number) {
   return `${String(hours).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
 }
 
-export function slotKey(date: string, startMinutes: number) {
-  return `${date}:${String(startMinutes).padStart(4, '0')}`
-}
-
 export function isActiveBooking(status: string) {
   return status === 'pending' || status === 'confirmed'
 }
@@ -110,7 +107,7 @@ export async function getOrCreateWakaBookingSettings() {
 export function isWithinBookingWindow(date: string, bookingWindowDays: number) {
   const today = getLocalDateKey()
   const lastDate = addDateKeys(today, Math.max(bookingWindowDays - 1, 0))
-  return Boolean(lastDate && date >= today && date <= lastDate)
+  return Boolean(lastDate && date > today && date <= lastDate)
 }
 
 export function getScheduleForDate(
@@ -124,24 +121,26 @@ export function getScheduleForDate(
 export function buildSlots(
   schedule: { enabled: boolean; openMinutes: number; closeMinutes: number },
   slotMinutes: number,
-  bookedStarts: Set<number>,
+  bookedRanges: Array<{ startMinutes: number; endMinutes: number }>,
 ) {
   if (!schedule.enabled) {
     return []
   }
 
-  const slots: Array<{ startMinutes: number; endMinutes: number; start: string; end: string; available: boolean }> = []
+  const slots: Array<{ startMinutes: number; endMinutes: number; start: string; end: string; available: boolean; booked: boolean }> = []
   for (
     let startMinutes = schedule.openMinutes;
     startMinutes + slotMinutes <= schedule.closeMinutes;
     startMinutes += slotMinutes
   ) {
+    const booked = bookedRanges.some((range) => range.startMinutes < startMinutes + slotMinutes && range.endMinutes > startMinutes)
     slots.push({
       startMinutes,
       endMinutes: startMinutes + slotMinutes,
       start: formatMinutes(startMinutes),
       end: formatMinutes(startMinutes + slotMinutes),
-      available: !bookedStarts.has(startMinutes),
+      available: !booked,
+      booked,
     })
   }
   return slots

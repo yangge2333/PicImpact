@@ -6,6 +6,7 @@ import { Hono } from 'hono'
 
 import {
   CONTACT_TYPES,
+  DISPLAY_PAST_DAYS,
   addDateKeys,
   buildSlots,
   getLocalDateKey,
@@ -15,7 +16,6 @@ import {
   isWithinBookingWindow,
   parseDateKey,
   serializeBooking,
-  slotKey,
 } from '~/server/booking/waka'
 import { badRequest, conflict, serverError } from '~/hono/_lib/errors'
 import { ok } from '~/hono/_lib/response'
@@ -37,6 +37,11 @@ function getDateRange(fromValue?: string, toValue?: string) {
   const to = toValue || addDateKeys(from, 30)
   if (!to || !parseDateKey(from) || !parseDateKey(to) || from > to) {
     throw badRequest('日期范围无效')
+  }
+  const today = getLocalDateKey()
+  const firstDisplayDate = addDateKeys(today, -DISPLAY_PAST_DAYS)
+  if (!firstDisplayDate || from < firstDisplayDate) {
+    throw badRequest('最多只能查看过去 30 天的排班')
   }
   return { from, to }
 }
@@ -69,7 +74,7 @@ app.get('/availability', async (c) => {
   try {
     const settings = await getOrCreateWakaBookingSettings()
     const { from, to } = getDateRange(c.req.query('from'), c.req.query('to'))
-    const maxTo = addDateKeys(from, settings.bookingWindowDays - 1)
+    const maxTo = addDateKeys(getLocalDateKey(), settings.bookingWindowDays - 1)
     if (!maxTo || to > maxTo) {
       throw badRequest('查询范围不能超过可预约时间范围')
     }
@@ -81,27 +86,29 @@ app.get('/availability', async (c) => {
         bookingDate: { gte: fromDate, lt: toExclusive },
         status: { in: ['pending', 'confirmed'] },
       },
-      select: { bookingDate: true, startMinutes: true },
+      select: { bookingDate: true, startMinutes: true, endMinutes: true },
     })
 
-    const bookedByDate = new Map<string, Set<number>>()
+    const bookedByDate = new Map<string, Array<{ startMinutes: number; endMinutes: number }>>()
     for (const booking of bookings) {
       const date = booking.bookingDate.toISOString().slice(0, 10)
-      const starts = bookedByDate.get(date) || new Set<number>()
-      starts.add(booking.startMinutes)
-      bookedByDate.set(date, starts)
+      const ranges = bookedByDate.get(date) || []
+      ranges.push({ startMinutes: booking.startMinutes, endMinutes: booking.endMinutes })
+      bookedByDate.set(date, ranges)
     }
 
+    const today = getLocalDateKey()
     const days = []
     for (let date = from; date <= to;) {
       const schedule = getScheduleForDate(settings.schedules, date)
+      const slots = schedule
+        ? buildSlots(schedule, settings.slotMinutes, bookedByDate.get(date) || [])
+        : []
       days.push({
         date,
         weekday: schedule?.weekday || null,
         enabled: Boolean(schedule?.enabled),
-        slots: schedule
-          ? buildSlots(schedule, settings.slotMinutes, bookedByDate.get(date) || new Set())
-          : [],
+        slots: date <= today ? slots.map((slot) => ({ ...slot, available: false })) : slots,
       })
       date = addDateKeys(date, 1) as string
     }
@@ -121,12 +128,13 @@ app.post('/', async (c) => {
     const date = asString(body.date)
     const dateValue = parseDateKey(date)
     const startMinutes = Number(body.startMinutes)
+    const endMinutes = Number(body.endMinutes)
     const contactType = normalizeContactType(body.contactType)
     const contactValue = asString(body.contactValue)
     const customerName = asString(body.customerName)
     const note = asString(body.note)
 
-    if (!dateValue || !contactType || !Number.isInteger(startMinutes)) {
+    if (!dateValue || !contactType || !Number.isInteger(startMinutes) || !Number.isInteger(endMinutes)) {
       throw badRequest('预约信息不完整')
     }
     if (contactValue.length < 2 || contactValue.length > 120) {
@@ -144,30 +152,44 @@ app.post('/', async (c) => {
     }
     if (
       startMinutes % settings.slotMinutes !== 0 ||
+      endMinutes % settings.slotMinutes !== 0 ||
+      endMinutes <= startMinutes ||
       startMinutes < schedule.openMinutes ||
-      startMinutes + settings.slotMinutes > schedule.closeMinutes
+      endMinutes > schedule.closeMinutes
     ) {
       throw badRequest('该时间段不可预约')
     }
 
-    const booking = await db.wakaBooking.create({
-      data: {
-        id: createId(),
-        bookingDate: dateValue,
-        startMinutes,
-        endMinutes: startMinutes + settings.slotMinutes,
-        slotKey: slotKey(date, startMinutes),
-        contactType,
-        contactValue,
-        customerName: customerName || null,
-        note: note || null,
-        status: 'pending',
-      },
-    })
+    const booking = await db.$transaction(async (tx) => {
+      const overlapping = await tx.wakaBooking.findFirst({
+        where: {
+          bookingDate: dateValue,
+          status: { in: ['pending', 'confirmed'] },
+          startMinutes: { lt: endMinutes },
+          endMinutes: { gt: startMinutes },
+        },
+      })
+      if (overlapping) {
+        throw conflict('所选时间段与已有预约重叠，请重新选择')
+      }
+      return tx.wakaBooking.create({
+        data: {
+          id: createId(),
+          bookingDate: dateValue,
+          startMinutes,
+          endMinutes,
+          contactType,
+          contactValue,
+          customerName: customerName || null,
+          note: note || null,
+          status: 'pending',
+        },
+      })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
     return ok(c, serializeBooking(booking))
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code)) {
       throw conflict('该时间段刚刚被预约，请重新选择')
     }
     if (error instanceof Error && error.name === 'HTTPException') {

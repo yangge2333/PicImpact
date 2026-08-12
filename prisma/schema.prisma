@@ -241,7 +241,6 @@ model WakaBooking {
   bookingDate  DateTime @map("booking_date") @db.Date
   startMinutes Int      @map("start_minutes") @db.SmallInt
   endMinutes   Int      @map("end_minutes") @db.SmallInt
-  slotKey      String   @unique @map("slot_key") @db.VarChar(80)
   contactType  String   @map("contact_type") @db.VarChar(20)
   contactValue String   @map("contact_value") @db.VarChar(120)
   customerName String?  @map("customer_name") @db.VarChar(80)

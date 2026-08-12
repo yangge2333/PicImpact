@@ -56,10 +56,10 @@ VALUES ('waka-booking-default', 90, 30);
 
 INSERT INTO "waka_booking_schedules" ("id", "settings_id", "weekday", "enabled", "open_minutes", "close_minutes")
 VALUES
-    ('waka-booking-mon', 'waka-booking-default', 1, true, 540, 1080),
-    ('waka-booking-tue', 'waka-booking-default', 2, true, 540, 1080),
-    ('waka-booking-wed', 'waka-booking-default', 3, true, 540, 1080),
-    ('waka-booking-thu', 'waka-booking-default', 4, true, 540, 1080),
-    ('waka-booking-fri', 'waka-booking-default', 5, true, 540, 1080),
-    ('waka-booking-sat', 'waka-booking-default', 6, true, 540, 1080),
-    ('waka-booking-sun', 'waka-booking-default', 7, true, 540, 1080);
+    ('waka-booking-mon', 'waka-booking-default', 1, true, 600, 1260),
+    ('waka-booking-tue', 'waka-booking-default', 2, true, 600, 1260),
+    ('waka-booking-wed', 'waka-booking-default', 3, true, 600, 1260),
+    ('waka-booking-thu', 'waka-booking-default', 4, true, 600, 1260),
+    ('waka-booking-fri', 'waka-booking-default', 5, true, 600, 1260),
+    ('waka-booking-sat', 'waka-booking-default', 6, true, 600, 1260),
+    ('waka-booking-sun', 'waka-booking-default', 7, true, 600, 1260);

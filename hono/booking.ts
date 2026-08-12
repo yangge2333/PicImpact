@@ -12,7 +12,6 @@ import {
   getOrCreateWakaBookingSettings,
   parseDateKey,
   serializeBooking,
-  slotKey,
 } from '~/server/booking/waka'
 import { db } from '~/server/lib/db'
 
@@ -167,7 +166,6 @@ app.patch('/reservations/:id/status', async (c) => {
       where: { id },
       data: {
         status,
-        slotKey: status === 'confirmed' ? slotKey(existing.bookingDate.toISOString().slice(0, 10), existing.startMinutes) : `${id}:${status}`,
         adminNote: adminNote || null,
         confirmedAt: status === 'confirmed' ? new Date() : null,
       },
