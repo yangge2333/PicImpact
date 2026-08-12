@@ -21,6 +21,7 @@ import {
   serializeBooking,
 } from '~/server/booking/waka'
 import { db } from '~/server/lib/db'
+import { refundAlipayPayment } from '~/server/payment/alipay'
 
 const app = new Hono()
 app.use('*', requireAuth)
@@ -344,14 +345,73 @@ app.patch('/reservations/:id/status', async (c) => {
       throw conflict('已结束的预约不能再次操作')
     }
 
-    const booking = await db.wakaBooking.update({
-      where: { id },
-      data: {
-        status,
-        adminNote: adminNote || null,
-        confirmedAt: status === 'confirmed' ? new Date() : null,
-      },
-      include: { studio: { select: { name: true } } },
+    let refundContext: { requestNo: string; amountCents: number; refundedAt: Date } | null = null
+    if (status === 'rejected' && existing.paymentOrderNo && existing.paymentProvider === 'alipay') {
+      const orderBookings = await db.wakaBooking.findMany({
+        where: { paymentOrderNo: existing.paymentOrderNo },
+        select: {
+          paymentAmount: true,
+          paidAt: true,
+          providerTradeNo: true,
+          refundRequestNo: true,
+          refundAmount: true,
+          refundStatus: true,
+          refundedAt: true,
+        },
+      })
+      const paidBooking = orderBookings.find((booking) => booking.paidAt && booking.paymentAmount)
+      const refundedBooking = orderBookings.find((booking) => booking.refundStatus === 'success')
+      if (refundedBooking?.refundStatus === 'success' && refundedBooking.refundAmount) {
+        refundContext = {
+          requestNo: refundedBooking.refundRequestNo || `refund_${existing.paymentOrderNo}`,
+          amountCents: refundedBooking.refundAmount,
+          refundedAt: refundedBooking.refundedAt || new Date(),
+        }
+      } else if (paidBooking?.paymentAmount) {
+        const requestNo = `refund_${existing.paymentOrderNo}`
+        try {
+          await refundAlipayPayment({
+            orderNo: existing.paymentOrderNo,
+            tradeNo: paidBooking.providerTradeNo,
+            amountCents: paidBooking.paymentAmount,
+            refundRequestNo: requestNo,
+          })
+          refundContext = { requestNo, amountCents: paidBooking.paymentAmount, refundedAt: new Date() }
+        } catch (refundError) {
+          console.error('Alipay booking refund failed:', refundError instanceof Error ? refundError.message : refundError)
+          throw conflict('支付宝自动退款失败，请稍后重试')
+        }
+      }
+    }
+
+    const booking = await db.$transaction(async (tx) => {
+      if (status === 'rejected' && existing.paymentOrderNo && refundContext) {
+        await tx.wakaBooking.updateMany({
+          where: { paymentOrderNo: existing.paymentOrderNo },
+          data: {
+            status: 'rejected',
+            adminNote: adminNote || null,
+            confirmedAt: null,
+            refundRequestNo: refundContext.requestNo,
+            refundAmount: refundContext.amountCents,
+            refundStatus: 'success',
+            refundedAt: refundContext.refundedAt,
+          },
+        })
+      } else {
+        await tx.wakaBooking.update({
+          where: { id },
+          data: {
+            status,
+            adminNote: adminNote || null,
+            confirmedAt: status === 'confirmed' ? new Date() : null,
+          },
+        })
+      }
+      return tx.wakaBooking.findUniqueOrThrow({
+        where: { id },
+        include: { studio: { select: { name: true } } },
+      })
     })
     return ok(c, serializeBooking(booking))
   } catch (error) {

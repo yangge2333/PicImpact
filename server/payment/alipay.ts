@@ -22,6 +22,19 @@ export type AlipayPagePayment = {
   mode: 'page' | 'wap'
 }
 
+export type AlipayRefundRequest = {
+  orderNo: string
+  tradeNo?: string | null
+  amountCents: number
+  refundRequestNo: string
+}
+
+export type AlipayRefundResult = {
+  refundFee: string
+  refundedAt: string | null
+  tradeNo: string | null
+}
+
 function normalizeKey(value: string | undefined) {
   return (value || '').trim().replace(/\\n/g, '\n')
 }
@@ -141,6 +154,56 @@ export function createAlipayPagePayment(orderNo: string, amountCents = getWakaBo
     params: { ...params, sign: sign(params, config.privateKey) },
     amountCents,
     mode,
+  }
+}
+
+export async function refundAlipayPayment(request: AlipayRefundRequest): Promise<AlipayRefundResult> {
+  const config = getAlipayConfig()
+  const bizContent: Record<string, string> = {
+    refund_amount: formatAmount(request.amountCents),
+    out_request_no: request.refundRequestNo,
+    refund_reason: '预约被拒绝，自动退还定金',
+  }
+  if (request.tradeNo) {
+    bizContent.trade_no = request.tradeNo
+  } else {
+    bizContent.out_trade_no = request.orderNo
+  }
+
+  const params: Record<string, string> = {
+    app_id: config.appId,
+    method: 'alipay.trade.refund',
+    format: 'JSON',
+    charset: 'utf-8',
+    sign_type: 'RSA2',
+    timestamp: formatTimestamp(),
+    version: '1.0',
+    biz_content: JSON.stringify(bizContent),
+  }
+  const body = new URLSearchParams({ ...params, sign: sign(params, config.privateKey) })
+  const response = await fetch(config.gatewayUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body,
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    throw new Error(`支付宝退款网关返回 HTTP ${response.status}`)
+  }
+
+  const payload = await response.json() as { alipay_trade_refund_response?: Record<string, string> }
+  const result = payload.alipay_trade_refund_response
+  if (!result || result.code !== '10000') {
+    throw new Error(`支付宝退款失败：${result?.sub_code || result?.msg || '未知错误'}`)
+  }
+  if (result.fund_change !== 'Y' || !amountMatchesCents(result.refund_fee, request.amountCents)) {
+    throw new Error('支付宝退款结果金额异常')
+  }
+
+  return {
+    refundFee: result.refund_fee,
+    refundedAt: result.gmt_refund_pay || null,
+    tradeNo: result.trade_no || null,
   }
 }
 

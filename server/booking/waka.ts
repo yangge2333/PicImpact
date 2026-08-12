@@ -204,6 +204,7 @@ export function serializeBooking(booking: {
   status: string
   adminNote: string | null
   confirmedAt: Date | null
+  refundStatus?: string | null
   createdAt: Date
   studio?: { name: string } | null
 }) {
@@ -221,6 +222,7 @@ export function serializeBooking(booking: {
     status: booking.status,
     adminNote: booking.adminNote,
     confirmedAt: booking.confirmedAt?.toISOString() || null,
+    refundStatus: booking.refundStatus || null,
     createdAt: booking.createdAt.toISOString(),
   }
 }

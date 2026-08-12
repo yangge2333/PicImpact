@@ -280,6 +280,10 @@ model WakaBooking {
   paymentExpiresAt DateTime?         @map("payment_expires_at") @db.Timestamp
   paidAt           DateTime?         @map("paid_at") @db.Timestamp
   providerTradeNo  String?           @map("provider_trade_no") @db.VarChar(80)
+  refundRequestNo  String?           @map("refund_request_no") @db.VarChar(80)
+  refundAmount     Int?              @map("refund_amount") @db.Integer
+  refundStatus     String?           @map("refund_status") @db.VarChar(20)
+  refundedAt       DateTime?         @map("refunded_at") @db.Timestamp
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamp
   updatedAt        DateTime?         @updatedAt @map("updated_at") @db.Timestamp
   studio           WakaBookingStudio @relation(fields: [studioId], references: [id])

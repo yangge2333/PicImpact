@@ -6,7 +6,7 @@ import { CalendarClock, Check, ChevronDown, Loader2, Plus, Save, Trash2, X } fro
 type Schedule = { weekday: number; enabled: boolean; openMinutes: number; closeMinutes: number }
 type Studio = { id: string; name: string; enabled: boolean; sort: number }
 type Settings = { id: string; bookingWindowDays: number; slotMinutes: number; schedules: Schedule[]; closedDates: string[]; studios: Studio[] }
-type Booking = { id: string; studioId: string; studioName: string | null; date: string; start: string; end: string; contactType: string; contactValue: string; customerName: string | null; note: string | null; status: string; adminNote: string | null; confirmedAt: string | null; createdAt: string }
+type Booking = { id: string; studioId: string; studioName: string | null; date: string; start: string; end: string; contactType: string; contactValue: string; customerName: string | null; note: string | null; status: string; adminNote: string | null; confirmedAt: string | null; refundStatus: string | null; createdAt: string }
 type CreateSelection = { id: number; studioId: string; date: string; startMinutes: number; endMinutes: number }
 type CreateForm = { selections: CreateSelection[]; contactType: string; contactValue: string; customerName: string; note: string }
 type ApiResponse<T> = { code: number; message: string; data: T }
@@ -168,8 +168,12 @@ export default function BookingPage() {
     setMessage('')
     try {
       const updated = await request<Booking>(`/api/v1/booking/reservations/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
-      setBookings((current) => current.map((booking) => booking.id === id ? updated : booking))
-      setMessage(status === 'confirmed' ? '预约已确认' : '预约已拒绝')
+      if (status === 'rejected') {
+        await load()
+      } else {
+        setBookings((current) => current.map((booking) => booking.id === id ? updated : booking))
+      }
+      setMessage(status === 'confirmed' ? '预约已确认' : updated.refundStatus === 'success' ? '预约已拒绝，定金已自动退款' : '预约已拒绝')
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : '操作失败')
     } finally {

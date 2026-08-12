@@ -64,6 +64,7 @@ type Booking = {
   status: string
   adminNote: string | null
   confirmedAt: string | null
+  refundStatus: string | null
   createdAt: string
 }
 
