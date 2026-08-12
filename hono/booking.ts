@@ -14,6 +14,7 @@ import {
   addDateKeys,
   getLocalDateKey,
   getOrCreateWakaBookingSettings,
+  getOrCreateWakaBookingStudios,
   getScheduleForDate,
   isClosedDate,
   parseDateKey,
@@ -97,14 +98,31 @@ function validateClosedDates(value: unknown) {
   return [...new Set(dates)].sort()
 }
 
+function validateStudioInput(value: unknown) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 50) {
+    throw badRequest('棚子配置无效')
+  }
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object') throw badRequest('棚子配置无效')
+    const row = item as Record<string, unknown>
+    const id = asString(row.id)
+    const name = asString(row.name)
+    const enabled = row.enabled !== false
+    if (name.length < 1 || name.length > 80) throw badRequest('棚子名称长度无效')
+    return { id, name, enabled, sort: Number.isInteger(Number(row.sort)) ? Number(row.sort) : index }
+  })
+}
+
 app.get('/settings', async (c) => {
   try {
     const settings = await getOrCreateWakaBookingSettings()
+    const studios = await getOrCreateWakaBookingStudios()
     return ok(c, {
       bookingWindowDays: settings.bookingWindowDays,
       slotMinutes: settings.slotMinutes,
       schedules: settings.schedules,
       closedDates: settings.closedDates.map((closedDate) => closedDate.date.toISOString().slice(0, 10)),
+      studios: studios.map((studio) => ({ id: studio.id, name: studio.name, enabled: studio.enabled, sort: studio.sort })),
     })
   } catch (error) {
     throw serverError('Failed to fetch booking settings', error)
@@ -120,6 +138,10 @@ app.put('/settings', async (c) => {
     }
     const schedules = validateScheduleInput(body.schedules)
     const closedDates = body.closedDates === undefined ? null : validateClosedDates(body.closedDates)
+    const studiosInput = body.studios === undefined ? null : validateStudioInput(body.studios)
+    if (studiosInput && !studiosInput.some((studio) => studio.enabled)) {
+      throw badRequest('至少保留一个可用棚子')
+    }
     const settings = await getOrCreateWakaBookingSettings()
     const updated = await db.$transaction(async (tx) => {
       await tx.wakaBookingSettings.update({
@@ -144,13 +166,30 @@ app.put('/settings', async (c) => {
           })
         }
       }
-      return tx.wakaBookingSettings.findUniqueOrThrow({
+      if (studiosInput) {
+        const existingStudios = await tx.wakaBookingStudio.findMany()
+        const incomingIds = new Set<string>()
+        for (const studio of studiosInput) {
+          const existing = studio.id ? existingStudios.find((item) => item.id === studio.id) : null
+          const id = existing?.id || createId()
+          incomingIds.add(id)
+          if (existing) {
+            await tx.wakaBookingStudio.update({ where: { id }, data: { name: studio.name, enabled: studio.enabled, sort: studio.sort } })
+          } else {
+            await tx.wakaBookingStudio.create({ data: { id, name: studio.name, enabled: studio.enabled, sort: studio.sort } })
+          }
+        }
+        await tx.wakaBookingStudio.updateMany({ where: { id: { notIn: [...incomingIds] } }, data: { enabled: false } })
+      }
+      const result = await tx.wakaBookingSettings.findUniqueOrThrow({
         where: { id: settings.id },
         include: {
           schedules: { orderBy: { weekday: 'asc' } },
           closedDates: { orderBy: { date: 'asc' } },
         },
       })
+      const studioRows = await tx.wakaBookingStudio.findMany({ orderBy: [{ sort: 'asc' }, { createdAt: 'asc' }] })
+      return { ...result, studios: studioRows }
     })
     return ok(c, updated)
   } catch (error) {
@@ -170,7 +209,7 @@ app.post('/reservations', async (c) => {
     const selections = rawSelections.map((value) => {
       const row = value && typeof value === 'object' ? value as Record<string, unknown> : {}
       const date = asString(row.date)
-      return { date, dateValue: parseDateKey(date), startMinutes: Number(row.startMinutes), endMinutes: Number(row.endMinutes) }
+      return { studioId: asString(row.studioId), date, dateValue: parseDateKey(date), startMinutes: Number(row.startMinutes), endMinutes: Number(row.endMinutes) }
     })
     const contactType = asContactType(body.contactType)
     const contactValue = asString(body.contactValue)
@@ -191,7 +230,11 @@ app.post('/reservations', async (c) => {
     }
 
     const settings = await getOrCreateWakaBookingSettings()
+    const studios = await getOrCreateWakaBookingStudios()
     for (const selection of selections) {
+      if (!selection.studioId || !studios.some((studio) => studio.id === selection.studioId && studio.enabled)) {
+        throw badRequest('请选择有效的棚子')
+      }
       if (isClosedDate(settings.closedDates, selection.date)) {
         throw badRequest(`${selection.date} 是休息日，不能添加预约`)
       }
@@ -216,6 +259,7 @@ app.post('/reservations', async (c) => {
         const bookingDate = selection.dateValue as Date
         const overlapping = await tx.wakaBooking.findFirst({
           where: {
+            studioId: selection.studioId,
             bookingDate,
             status: { in: ['pending', 'confirmed'] },
             startMinutes: { lt: selection.endMinutes },
@@ -228,6 +272,7 @@ app.post('/reservations', async (c) => {
         createdBookings.push(await tx.wakaBooking.create({
           data: {
             id: createId(),
+            studioId: selection.studioId,
             bookingDate,
             startMinutes: selection.startMinutes,
             endMinutes: selection.endMinutes,
@@ -237,6 +282,7 @@ app.post('/reservations', async (c) => {
             note: note || null,
             status: 'pending',
           },
+          include: { studio: { select: { name: true } } },
         }))
       }
       return createdBookings
@@ -266,6 +312,7 @@ app.get('/reservations', async (c) => {
         ...(status ? { status } : {}),
       },
       orderBy: [{ bookingDate: 'asc' }, { startMinutes: 'asc' }],
+      include: { studio: { select: { name: true } } },
     })
     return ok(c, bookings.map(serializeBooking))
   } catch (error) {
@@ -304,6 +351,7 @@ app.patch('/reservations/:id/status', async (c) => {
         adminNote: adminNote || null,
         confirmedAt: status === 'confirmed' ? new Date() : null,
       },
+      include: { studio: { select: { name: true } } },
     })
     return ok(c, serializeBooking(booking))
   } catch (error) {

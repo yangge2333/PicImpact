@@ -12,6 +12,7 @@ import {
   buildSlots,
   getLocalDateKey,
   getOrCreateWakaBookingSettings,
+  getOrCreateWakaBookingStudios,
   getScheduleForDate,
   isClosedDate,
   isActiveBooking,
@@ -72,6 +73,7 @@ async function assertBookableDate(date: string, bookingWindowDays: number) {
 app.get('/config', async (c) => {
   try {
     const settings = await getOrCreateWakaBookingSettings()
+    const studios = await getOrCreateWakaBookingStudios()
     return ok(c, {
       bookingWindowDays: settings.bookingWindowDays,
       slotMinutes: settings.slotMinutes,
@@ -82,6 +84,7 @@ app.get('/config', async (c) => {
         closeMinutes: schedule.closeMinutes,
       })),
       closedDates: settings.closedDates.map((closedDate) => closedDate.date.toISOString().slice(0, 10)),
+      studios: studios.filter((studio) => studio.enabled).map((studio) => ({ id: studio.id, name: studio.name })),
     })
   } catch (error) {
     throw serverError('Failed to fetch booking config', error)
@@ -91,6 +94,11 @@ app.get('/config', async (c) => {
 app.get('/availability', async (c) => {
   try {
     const settings = await getOrCreateWakaBookingSettings()
+    const studios = await getOrCreateWakaBookingStudios()
+    const studioId = asString(c.req.query('studioId'))
+    if (!studioId || !studios.some((studio) => studio.id === studioId && studio.enabled)) {
+      throw badRequest('请选择有效的棚子')
+    }
     const { from, to } = getDateRange(c.req.query('from'), c.req.query('to'))
     const maxTo = addDateKeys(getLocalDateKey(), settings.bookingWindowDays)
     if (!maxTo || to > maxTo) {
@@ -101,6 +109,7 @@ app.get('/availability', async (c) => {
     const toExclusive = parseDateKey(addDateKeys(to, 1) as string) as Date
     const bookings = await db.wakaBooking.findMany({
       where: {
+        studioId,
         bookingDate: { gte: fromDate, lt: toExclusive },
         status: { in: ['pending', 'confirmed'] },
       },
@@ -158,6 +167,7 @@ app.post('/', async (c) => {
     const contactValue = asString(body.contactValue)
     const customerName = asString(body.customerName)
     const note = asString(body.note)
+    const studioId = asString(body.studioId)
     const ipAddress = getClientIp(c)
 
     if (!ranges.length || ranges.length > 90 || !contactType || ranges.some((range) => !range.dateValue || !Number.isInteger(range.startMinutes) || !Number.isInteger(range.endMinutes))) {
@@ -177,6 +187,10 @@ app.post('/', async (c) => {
     }
 
     const settings = await getOrCreateWakaBookingSettings()
+    const studios = await getOrCreateWakaBookingStudios()
+    if (!studioId || !studios.some((studio) => studio.id === studioId && studio.enabled)) {
+      throw badRequest('请选择有效的棚子')
+    }
     for (const range of ranges) {
       await assertBookableDate(range.date, settings.bookingWindowDays)
       if (isClosedDate(settings.closedDates, range.date)) {
@@ -209,6 +223,7 @@ app.post('/', async (c) => {
       for (const range of ranges) {
         const overlapping = await tx.wakaBooking.findFirst({
           where: {
+            studioId,
             bookingDate: range.dateValue as Date,
             status: { in: ['pending', 'confirmed'] },
             startMinutes: { lt: range.endMinutes },
@@ -221,6 +236,7 @@ app.post('/', async (c) => {
         createdBookings.push(await tx.wakaBooking.create({
           data: {
             id: createId(),
+            studioId,
             bookingDate: range.dateValue as Date,
             startMinutes: range.startMinutes,
             endMinutes: range.endMinutes,
@@ -231,6 +247,7 @@ app.post('/', async (c) => {
             note: note || null,
             status: 'pending',
           },
+          include: { studio: { select: { name: true } } },
         }))
       }
       return createdBookings
@@ -259,6 +276,7 @@ app.get('/history', async (c) => {
     const bookings = await db.wakaBooking.findMany({
       where: { contactType, contactValue },
       orderBy: [{ bookingDate: 'desc' }, { startMinutes: 'desc' }],
+      include: { studio: { select: { name: true } } },
     })
     return ok(c, bookings.filter((booking) => isActiveBooking(booking.status) || booking.status === 'rejected' || booking.status === 'cancelled').map(serializeBooking))
   } catch (error) {

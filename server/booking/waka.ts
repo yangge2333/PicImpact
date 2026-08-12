@@ -10,6 +10,8 @@ export const DEFAULT_BOOKING_WINDOW_DAYS = 90
 export const DEFAULT_SLOT_MINUTES = 30
 export const DEFAULT_OPEN_MINUTES = 10 * 60
 export const DEFAULT_CLOSE_MINUTES = 21 * 60
+export const DEFAULT_STUDIO_ID = 'waka-studio-white-1'
+export const DEFAULT_STUDIO_NAME = '白棚1'
 export const DISPLAY_PAST_DAYS = 30
 export const LOCAL_TIME_ZONE = 'Asia/Shanghai'
 
@@ -65,6 +67,21 @@ export function formatMinutes(minutes: number) {
 
 export function isActiveBooking(status: string) {
   return status === 'pending' || status === 'confirmed'
+}
+
+export async function getOrCreateWakaBookingStudios() {
+  const existing = await db.wakaBookingStudio.findMany({ orderBy: [{ sort: 'asc' }, { createdAt: 'asc' }] })
+  if (existing.length > 0) return existing
+
+  try {
+    return [await db.wakaBookingStudio.create({
+      data: { id: DEFAULT_STUDIO_ID, name: DEFAULT_STUDIO_NAME, sort: 0, enabled: true },
+    })]
+  } catch (error) {
+    const createdByOtherRequest = await db.wakaBookingStudio.findMany({ orderBy: [{ sort: 'asc' }, { createdAt: 'asc' }] })
+    if (createdByOtherRequest.length > 0) return createdByOtherRequest
+    throw error
+  }
 }
 
 export async function getOrCreateWakaBookingSettings() {
@@ -161,6 +178,7 @@ export function buildSlots(
 
 export function serializeBooking(booking: {
   id: string
+  studioId: string
   bookingDate: Date
   startMinutes: number
   endMinutes: number
@@ -172,9 +190,12 @@ export function serializeBooking(booking: {
   adminNote: string | null
   confirmedAt: Date | null
   createdAt: Date
+  studio?: { name: string } | null
 }) {
   return {
     id: booking.id,
+    studioId: booking.studioId,
+    studioName: booking.studio?.name || null,
     date: booking.bookingDate.toISOString().slice(0, 10),
     start: formatMinutes(booking.startMinutes),
     end: formatMinutes(booking.endMinutes),

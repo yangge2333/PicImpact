@@ -1,7 +1,7 @@
 import { WakaBookingClient } from '~/components/waka/waka-booking-client'
 
 export const metadata = {
-  title: '预约排班表 | 哇咔印象',
+  title: '排期 | 哇咔印象',
 }
 
 export default function WakaBookingPage() {

@@ -73,10 +73,10 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    预约排班表
+                    排期
                   </Link>
                   <span className="px-3 py-1 text-xs tracking-[0.18em] whitespace-nowrap text-muted-foreground">
-                    公开样片赏析
+                    样片
                   </span>
                 </>
               ) : (
@@ -123,7 +123,7 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
               }`}
             >
               <Sparkles className="size-3.5 transition-transform duration-300 group-hover:rotate-12" />
-              {isWakaPage ? '船长的摄影小屋' : '哇咔印象'}
+              <span className="hidden sm:inline">{isWakaPage ? '船长的摄影小屋' : '哇咔印象'}</span>
             </Link>
             {!isWakaPage && (
               <Link

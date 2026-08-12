@@ -248,23 +248,38 @@ model WakaBookingClosedDate {
   @@map("waka_booking_closed_dates")
 }
 
+model WakaBookingStudio {
+  id        String        @id @db.VarChar(50)
+  name      String        @db.VarChar(80)
+  sort      Int           @default(0) @db.SmallInt
+  enabled   Boolean       @default(true)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime?     @updatedAt @map("updated_at") @db.Timestamp
+  bookings  WakaBooking[]
+
+  @@map("waka_booking_studios")
+}
+
 model WakaBooking {
-  id           String    @id @default(cuid()) @db.VarChar(50)
-  bookingDate  DateTime  @map("booking_date") @db.Date
-  startMinutes Int       @map("start_minutes") @db.SmallInt
-  endMinutes   Int       @map("end_minutes") @db.SmallInt
-  contactType  String    @map("contact_type") @db.VarChar(20)
-  contactValue String    @map("contact_value") @db.VarChar(120)
-  ipAddress    String?   @map("ip_address") @db.VarChar(64)
-  customerName String?   @map("customer_name") @db.VarChar(80)
-  note         String?   @db.Text
-  status       String    @default("pending") @db.VarChar(20)
-  adminNote    String?   @map("admin_note") @db.Text
-  confirmedAt  DateTime? @map("confirmed_at") @db.Timestamp
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp
+  id           String            @id @default(cuid()) @db.VarChar(50)
+  studioId     String            @map("studio_id") @db.VarChar(50)
+  bookingDate  DateTime          @map("booking_date") @db.Date
+  startMinutes Int               @map("start_minutes") @db.SmallInt
+  endMinutes   Int               @map("end_minutes") @db.SmallInt
+  contactType  String            @map("contact_type") @db.VarChar(20)
+  contactValue String            @map("contact_value") @db.VarChar(120)
+  ipAddress    String?           @map("ip_address") @db.VarChar(64)
+  customerName String?           @map("customer_name") @db.VarChar(80)
+  note         String?           @db.Text
+  status       String            @default("pending") @db.VarChar(20)
+  adminNote    String?           @map("admin_note") @db.Text
+  confirmedAt  DateTime?         @map("confirmed_at") @db.Timestamp
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime?         @updatedAt @map("updated_at") @db.Timestamp
+  studio       WakaBookingStudio @relation(fields: [studioId], references: [id])
 
   @@index([bookingDate, status])
+  @@index([studioId, bookingDate, status])
   @@index([ipAddress, createdAt])
   @@index([contactType, contactValue])
   @@map("waka_bookings")

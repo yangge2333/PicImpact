@@ -10,10 +10,13 @@ type Schedule = {
   closeMinutes: number
 }
 
+type Studio = { id: string; name: string }
+
 type BookingConfig = {
   bookingWindowDays: number
   slotMinutes: number
   schedules: Schedule[]
+  studios: Studio[]
 }
 
 type Slot = {
@@ -47,6 +50,8 @@ type SelectedRange = {
 
 type Booking = {
   id: string
+  studioId: string
+  studioName: string | null
   date: string
   start: string
   end: string
@@ -155,6 +160,7 @@ export function WakaBookingClient() {
   const [config, setConfig] = useState<BookingConfig | null>(null)
   const [days, setDays] = useState<AvailabilityDay[]>([])
   const [selectedDate, setSelectedDate] = useState(today)
+  const [studioId, setStudioId] = useState('')
   const [selections, setSelections] = useState<Record<string, DaySelection>>({})
   const [visibleMonth, setVisibleMonth] = useState(monthKey(today))
   const [calendarExpanded, setCalendarExpanded] = useState(true)
@@ -178,6 +184,7 @@ export function WakaBookingClient() {
   const monthDays = useMemo(() => getMonthDays(visibleMonth), [visibleMonth])
   const calendarDays = useMemo(() => calendarExpanded ? monthDays : getWeekDays(selectedDate), [calendarExpanded, monthDays, selectedDate])
   const firstDate = addDays(today, -30)
+  const bookingWindowDays = config?.bookingWindowDays || 0
   const lastDate = config ? addDays(today, config.bookingWindowDays) : today
   const selectedSelection = selections[selectedDate] || { startMinutes: null, endMinutes: null }
   const selectedStart = currentDay?.slots.find((slot) => slot.startMinutes === selectedSelection.startMinutes) || null
@@ -202,17 +209,9 @@ export function WakaBookingClient() {
     async function load() {
       try {
         const loadedConfig = await request<BookingConfig>('/api/waka/booking/config')
-        const availability = await request<{ days: AvailabilityDay[] }>(
-          `/api/waka/booking/availability?from=${addDays(today, -30)}&to=${addDays(today, loadedConfig.bookingWindowDays)}`
-        )
         if (!cancelled) {
           setConfig(loadedConfig)
-          setDays(availability.days)
-          const firstAvailable = availability.days.find((day) => day.slots.some((slot) => slot.available))
-          if (firstAvailable) {
-            setSelectedDate(firstAvailable.date)
-            setVisibleMonth(monthKey(firstAvailable.date))
-          }
+          setStudioId((current) => current || loadedConfig.studios[0]?.id || '')
         }
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : '排班加载失败')
@@ -226,9 +225,46 @@ export function WakaBookingClient() {
     }
   }, [today])
 
+  useEffect(() => {
+    if (!bookingWindowDays || !studioId) return
+    let cancelled = false
+    async function loadAvailability() {
+      try {
+        const availability = await request<{ days: AvailabilityDay[] }>(
+          `/api/waka/booking/availability?studioId=${encodeURIComponent(studioId)}&from=${addDays(today, -30)}&to=${addDays(today, bookingWindowDays)}`
+        )
+        if (!cancelled) {
+          setDays(availability.days)
+          const firstAvailable = availability.days.find((day) => day.slots.some((slot) => slot.available))
+          if (firstAvailable && !availability.days.some((day) => day.date === selectedDate)) {
+            setSelectedDate(firstAvailable.date)
+            setVisibleMonth(monthKey(firstAvailable.date))
+          }
+        }
+      } catch (loadError) {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : '排班加载失败')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    setLoading(true)
+    void loadAvailability()
+    return () => {
+      cancelled = true
+    }
+  }, [bookingWindowDays, studioId, today])
+
   function selectDate(value: string) {
     setSelectedDate(value)
     setVisibleMonth(monthKey(value))
+    setSuccess(null)
+    setError('')
+  }
+
+  function selectStudio(value: string) {
+    if (value === studioId) return
+    setStudioId(value)
+    setSelections({})
     setSuccess(null)
     setError('')
   }
@@ -256,6 +292,7 @@ export function WakaBookingClient() {
       const response = await request<Booking | Booking[]>('/api/waka/booking', {
         method: 'POST',
         body: JSON.stringify({
+          studioId,
           selections: selectedRanges.map((range) => ({ date: range.date, startMinutes: range.startMinutes, endMinutes: range.endMinutes })),
           contactType,
           contactValue,
@@ -274,7 +311,7 @@ export function WakaBookingClient() {
         return next
       })
       const refreshed = await request<{ days: AvailabilityDay[] }>(
-        `/api/waka/booking/availability?from=${firstDate}&to=${lastDate}`
+        `/api/waka/booking/availability?studioId=${encodeURIComponent(studioId)}&from=${firstDate}&to=${lastDate}`
       )
       setDays(refreshed.days)
     } catch (submitError) {
@@ -307,9 +344,8 @@ export function WakaBookingClient() {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Waka Schedule</p>
-            <span className="rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">白棚1</span>
           </div>
-          <h1 className="mt-3 font-hero-title text-4xl font-semibold leading-tight text-foreground sm:text-5xl">预约排班表</h1>
+          <h1 className="mt-3 font-hero-title text-4xl font-semibold leading-tight text-foreground sm:text-5xl">排期</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">在半小时刻度上选择开始和结束时间，留下联系方式后提交预约，船长确认后会更新状态。</p>
         </div>
         <button
@@ -375,6 +411,9 @@ export function WakaBookingClient() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Available slots</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {config?.studios.map((studio) => <button key={studio.id} type="button" onClick={() => selectStudio(studio.id)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${studio.id === studioId ? 'border-foreground bg-foreground text-background' : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'}`}>{studio.name}</button>)}
+                  </div>
                   <h2 className="mt-2 text-xl font-semibold text-foreground">{formatDate(selectedDate, { weekday: 'long' })}</h2>
                 </div>
                 <Clock3 className="mt-1 size-5 text-muted-foreground" />
@@ -491,5 +530,5 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
 }
 
 function HistoryPanel({ contactType, contactValue, option, records, loading, error, onContactTypeChange, onContactValueChange, onSubmit }: { contactType: string; contactValue: string; option: (typeof CONTACT_OPTIONS)[number]; records: Booking[]; loading: boolean; error: string; onContactTypeChange: (value: string) => void; onContactValueChange: (value: string) => void; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void }) {
-  return <section className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm sm:p-8"><div className="mx-auto max-w-xl"><div className="text-center"><div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary"><Search className="size-5" /></div><h2 className="mt-4 text-2xl font-semibold text-foreground">查找我的预约</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">输入预约时留下的联系方式，只会看到与它匹配的预约记录。</p></div><form onSubmit={onSubmit} className="mt-7"><div className="flex flex-wrap justify-center gap-2">{CONTACT_OPTIONS.map((item) => <button key={item.value} type="button" onClick={() => onContactTypeChange(item.value)} className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${contactType === item.value ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:bg-accent'}`}>{item.label}</button>)}</div><input required value={contactValue} onChange={(event) => onContactValueChange(event.target.value)} placeholder={option.placeholder} className="mt-4 h-12 w-full rounded-xl border border-border bg-background px-4 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /><button type="submit" disabled={loading} className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-foreground text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50">{loading && <Loader2 className="size-4 animate-spin" />}查询预约</button></form>{error && <p className="mt-4 rounded-xl bg-destructive/10 px-3 py-3 text-sm text-destructive">{error}</p>}</div><div className="mx-auto mt-8 max-w-2xl space-y-3">{records.length === 0 && !loading ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-10 text-center text-sm text-muted-foreground">还没有查询到预约记录。</div> : records.map((record) => <div key={record.id} className="flex flex-col gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium text-foreground">{formatDate(record.date)} · {record.start}–{record.end}</p><p className="mt-1 text-xs text-muted-foreground">提交于 {new Date(record.createdAt).toLocaleString('zh-CN')}</p></div><span className={`inline-flex w-fit rounded-lg px-2.5 py-1 text-xs ${record.status === 'confirmed' ? 'bg-primary/10 text-primary' : record.status === 'rejected' || record.status === 'cancelled' ? 'bg-muted text-muted-foreground' : 'bg-accent text-accent-foreground'}`}>{statusLabel(record.status)}</span></div>)}</div></section>
+  return <section className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm sm:p-8"><div className="mx-auto max-w-xl"><div className="text-center"><div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary"><Search className="size-5" /></div><h2 className="mt-4 text-2xl font-semibold text-foreground">查找我的预约</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">输入预约时留下的联系方式，只会看到与它匹配的预约记录。</p></div><form onSubmit={onSubmit} className="mt-7"><div className="flex flex-wrap justify-center gap-2">{CONTACT_OPTIONS.map((item) => <button key={item.value} type="button" onClick={() => onContactTypeChange(item.value)} className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${contactType === item.value ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:bg-accent'}`}>{item.label}</button>)}</div><input required value={contactValue} onChange={(event) => onContactValueChange(event.target.value)} placeholder={option.placeholder} className="mt-4 h-12 w-full rounded-xl border border-border bg-background px-4 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /><button type="submit" disabled={loading} className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-foreground text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50">{loading && <Loader2 className="size-4 animate-spin" />}查询预约</button></form>{error && <p className="mt-4 rounded-xl bg-destructive/10 px-3 py-3 text-sm text-destructive">{error}</p>}</div><div className="mx-auto mt-8 max-w-2xl space-y-3">{records.length === 0 && !loading ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-10 text-center text-sm text-muted-foreground">还没有查询到预约记录。</div> : records.map((record) => <div key={record.id} className="flex flex-col gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><p className="font-medium text-foreground">{formatDate(record.date)} · {record.start}–{record.end}</p>{record.studioName && <span className="rounded-md bg-muted px-2 py-1 text-xs text-foreground">{record.studioName}</span>}</div><p className="mt-1 text-xs text-muted-foreground">提交于 {new Date(record.createdAt).toLocaleString('zh-CN')}</p></div><span className={`inline-flex w-fit rounded-lg px-2.5 py-1 text-xs ${record.status === 'confirmed' ? 'bg-primary/10 text-primary' : record.status === 'rejected' || record.status === 'cancelled' ? 'bg-muted text-muted-foreground' : 'bg-accent text-accent-foreground'}`}>{statusLabel(record.status)}</span></div>)}</div></section>
 }
