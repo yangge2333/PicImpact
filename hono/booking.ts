@@ -183,6 +183,9 @@ app.post('/reservations', async (c) => {
     if (new Set(selections.map((selection) => `${selection.date}:${selection.startMinutes}:${selection.endMinutes}`)).size !== selections.length) {
       throw badRequest('预约明细不能重复')
     }
+    if (!customerName) {
+      throw badRequest('请填写称呼（CN）')
+    }
     if (contactValue.length < 2 || contactValue.length > 120 || customerName.length > 80 || note.length > 1000) {
       throw badRequest('预约信息长度或联系方式无效')
     }

@@ -123,6 +123,12 @@ function getMonthDays(value: string) {
   return days
 }
 
+function getWeekDays(value: string) {
+  const date = parseDateKey(value)
+  const offset = (date.getDay() + 6) % 7
+  return Array.from({ length: 7 }, (_, index) => addDays(value, index - offset))
+}
+
 function statusLabel(status: string) {
   return {
     pending: '待确认',
@@ -151,6 +157,7 @@ export function WakaBookingClient() {
   const [selectedDate, setSelectedDate] = useState(today)
   const [selections, setSelections] = useState<Record<string, DaySelection>>({})
   const [visibleMonth, setVisibleMonth] = useState(monthKey(today))
+  const [calendarExpanded, setCalendarExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -169,6 +176,7 @@ export function WakaBookingClient() {
   const dayMap = useMemo(() => new Map(days.map((day) => [day.date, day])), [days])
   const currentDay = dayMap.get(selectedDate)
   const monthDays = useMemo(() => getMonthDays(visibleMonth), [visibleMonth])
+  const calendarDays = useMemo(() => calendarExpanded ? monthDays : getWeekDays(selectedDate), [calendarExpanded, monthDays, selectedDate])
   const firstDate = addDays(today, -30)
   const lastDate = config ? addDays(today, config.bookingWindowDays) : today
   const selectedSelection = selections[selectedDate] || { startMinutes: null, endMinutes: null }
@@ -216,6 +224,7 @@ export function WakaBookingClient() {
 
   function selectDate(value: string) {
     setSelectedDate(value)
+    setVisibleMonth(monthKey(value))
     setSuccess(null)
     setError('')
   }
@@ -286,7 +295,10 @@ export function WakaBookingClient() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 border-b border-border/70 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Waka Schedule</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Waka Schedule</p>
+            <span className="rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">白棚1</span>
+          </div>
           <h1 className="mt-3 font-hero-title text-4xl font-semibold leading-tight text-foreground sm:text-5xl">预约排班表</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">在半小时刻度上选择开始和结束时间，留下联系方式后提交预约，船长确认后会更新状态。</p>
         </div>
@@ -321,15 +333,11 @@ export function WakaBookingClient() {
                   <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Choose a day</p>
                   <h2 className="mt-2 text-xl font-semibold text-foreground">选日期</h2>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button type="button" aria-label="上一个月" onClick={() => setVisibleMonth(shiftMonth(visibleMonth, -1))} disabled={visibleMonth <= monthKey(today)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent disabled:opacity-30"><ArrowLeft className="size-4" /></button>
-                  <p className="min-w-28 text-center text-sm font-medium text-foreground">{monthLabel(visibleMonth)}</p>
-                  <button type="button" aria-label="下一个月" onClick={() => setVisibleMonth(shiftMonth(visibleMonth, 1))} disabled={visibleMonth >= monthKey(lastDate)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent disabled:opacity-30"><ArrowRight className="size-4" /></button>
-                </div>
+                {calendarExpanded ? <div className="flex items-center gap-1"><button type="button" aria-label="上一个月" onClick={() => setVisibleMonth(shiftMonth(visibleMonth, -1))} disabled={visibleMonth <= monthKey(today)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent disabled:opacity-30"><ArrowLeft className="size-4" /></button><p className="min-w-28 text-center text-sm font-medium text-foreground">{monthLabel(visibleMonth)}</p><button type="button" aria-label="下一个月" onClick={() => setVisibleMonth(shiftMonth(visibleMonth, 1))} disabled={visibleMonth >= monthKey(lastDate)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent disabled:opacity-30"><ArrowRight className="size-4" /></button><button type="button" onClick={() => setCalendarExpanded(false)} className="ml-1 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent">收起</button></div> : <button type="button" onClick={() => setCalendarExpanded(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent"><CalendarDays className="size-3.5" />展开日历</button>}
               </div>
               <div className="mt-6 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
                 {WEEKDAYS.map((weekday) => <span key={weekday} className="py-2">{weekday}</span>)}
-                {monthDays.map((value, index) => {
+                {calendarDays.map((value, index) => {
                   const day = value ? dayMap.get(value) : null
                   const availableCount = day?.slots.filter((slot) => slot.available).length || 0
                   const isPast = Boolean(value && value < today)
@@ -370,7 +378,7 @@ export function WakaBookingClient() {
               </div>
               <div className="mt-4 flex min-h-7 flex-wrap items-center gap-2">{selectedRanges.length > 0 ? selectedRanges.map((range) => <span key={range.date} className="rounded-lg bg-muted/60 px-3 py-1.5 text-xs text-foreground">{formatDate(range.date)} · {range.start}–{range.end}</span>) : <p className="text-sm text-muted-foreground">请先在右侧选择开始和结束时间。</p>}</div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <label className="text-sm text-foreground">称呼（可选）<input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="怎么称呼你" className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
+                <label className="text-sm text-foreground">称呼（CN） <span className="text-destructive">*</span><input required value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="怎么称呼你" className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
                 <label className="text-sm text-foreground">联系方式 <span className="text-destructive">*</span><input required value={contactValue} onChange={(event) => setContactValue(event.target.value)} placeholder={currentOption.placeholder} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">

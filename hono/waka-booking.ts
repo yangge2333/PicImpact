@@ -169,6 +169,9 @@ app.post('/', async (c) => {
     if (contactValue.length < 2 || contactValue.length > 120) {
       throw badRequest('请填写有效的联系方式')
     }
+    if (!customerName) {
+      throw badRequest('请填写称呼（CN）')
+    }
     if (customerName.length > 80 || note.length > 1000) {
       throw badRequest('预约信息长度超出限制')
     }
