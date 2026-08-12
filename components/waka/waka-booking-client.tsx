@@ -229,6 +229,12 @@ export function WakaBookingClient() {
     setError('')
   }
 
+  function shiftWeek(amount: number) {
+    const nextDate = addDays(selectedDate, amount * 7)
+    if (nextDate < firstDate || nextDate > lastDate) return
+    selectDate(nextDate)
+  }
+
   function updateSelection(date: string, patch: Partial<DaySelection>) {
     setSelections((current) => ({
       ...current,
@@ -335,19 +341,24 @@ export function WakaBookingClient() {
                 </div>
                 {calendarExpanded ? <div className="flex items-center gap-1"><button type="button" aria-label="上一个月" onClick={() => setVisibleMonth(shiftMonth(visibleMonth, -1))} disabled={visibleMonth <= monthKey(today)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent disabled:opacity-30"><ArrowLeft className="size-4" /></button><p className="min-w-28 text-center text-sm font-medium text-foreground">{monthLabel(visibleMonth)}</p><button type="button" aria-label="下一个月" onClick={() => setVisibleMonth(shiftMonth(visibleMonth, 1))} disabled={visibleMonth >= monthKey(lastDate)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent disabled:opacity-30"><ArrowRight className="size-4" /></button><button type="button" onClick={() => setCalendarExpanded(false)} className="ml-1 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent">收起</button></div> : <button type="button" onClick={() => setCalendarExpanded(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent"><CalendarDays className="size-3.5" />展开日历</button>}
               </div>
-              <div className="mt-6 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                {WEEKDAYS.map((weekday) => <span key={weekday} className="py-2">{weekday}</span>)}
-                {calendarDays.map((value, index) => {
-                  const day = value ? dayMap.get(value) : null
-                  const availableCount = day?.slots.filter((slot) => slot.available).length || 0
-                  const isPast = Boolean(value && value < today)
-                  const selectable = value ? (isPast || value === today ? Boolean(day) : Boolean(day?.enabled && availableCount > 0)) : false
-                  return value ? (
-                    <button key={value} type="button" onClick={() => selectDate(value)} disabled={!selectable} className={`group relative min-h-14 rounded-2xl p-1 text-sm transition-all ${selectedDate === value ? 'bg-foreground text-background shadow-md' : selectable ? 'text-foreground hover:bg-accent' : 'text-muted-foreground/35'}`}>
-                      <span className="block pt-1">{parseDateKey(value).getDate()}</span>
-                    </button>
-                  ) : <span key={`empty-${index}`} />
-                })}
+              <div className="relative mt-6 px-5">
+                {!calendarExpanded && <button type="button" aria-label="上一周" onClick={() => shiftWeek(-1)} disabled={selectedDate <= firstDate} className="absolute left-0 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-30"><ArrowLeft className="size-4" /></button>}
+                <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
+                  {WEEKDAYS.map((weekday) => <span key={weekday} className="py-2">{weekday}</span>)}
+                  {calendarDays.map((value, index) => {
+                    const day = value ? dayMap.get(value) : null
+                    const availableCount = day?.slots.filter((slot) => slot.available).length || 0
+                    const isPast = Boolean(value && value < today)
+                    const isToday = value === today
+                    const selectable = value ? (isPast || value === today ? Boolean(day) : Boolean(day?.enabled && availableCount > 0)) : false
+                    return value ? (
+                      <button key={value} type="button" aria-current={isToday ? 'date' : undefined} onClick={() => selectDate(value)} disabled={!selectable} className={`group relative min-h-14 rounded-2xl border p-1 text-sm transition-all ${selectedDate === value ? 'border-foreground bg-foreground text-background shadow-md' : isToday ? 'border-foreground/45 text-foreground' : 'border-transparent'} ${selectable && selectedDate !== value ? 'hover:bg-accent' : ''} ${!selectable && selectedDate !== value ? 'text-muted-foreground/35' : ''}`}>
+                        <span className="block pt-1">{parseDateKey(value).getDate()}</span>
+                      </button>
+                    ) : <span key={`empty-${index}`} />
+                  })}
+                </div>
+                {!calendarExpanded && <button type="button" aria-label="下一周" onClick={() => shiftWeek(1)} disabled={addDays(selectedDate, 7) > lastDate} className="absolute right-0 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-30"><ArrowRight className="size-4" /></button>}
               </div>
               <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-primary" />有空档</span>
