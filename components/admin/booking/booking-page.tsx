@@ -1,0 +1,124 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarClock, Check, ChevronDown, Loader2, Save, X } from 'lucide-react'
+
+type Schedule = { weekday: number; enabled: boolean; openMinutes: number; closeMinutes: number }
+type Settings = { id: string; bookingWindowDays: number; slotMinutes: number; schedules: Schedule[] }
+type Booking = { id: string; date: string; start: string; end: string; contactType: string; contactValue: string; customerName: string | null; note: string | null; status: string; adminNote: string | null; confirmedAt: string | null; createdAt: string }
+type ApiResponse<T> = { code: number; message: string; data: T }
+
+const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const TIME_OPTIONS = Array.from({ length: 49 }, (_, index) => {
+  const minutes = index * 30
+  return { minutes, label: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}` }
+})
+
+async function request<T>(url: string, init?: RequestInit) {
+  const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } })
+  const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null
+  if (!response.ok || !payload || payload.code !== 200) throw new Error(payload?.message || '请求失败')
+  return payload.data
+}
+
+function startOfToday() {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function addDays(value: string, days: number) {
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day + days)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function statusLabel(status: string) {
+  return { pending: '待确认', confirmed: '已确认', rejected: '未通过', cancelled: '已取消' }[status] || status
+}
+
+export default function BookingPage() {
+  const [settings, setSettings] = useState<Settings | null>(null)
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [workingId, setWorkingId] = useState('')
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  const visibleBookings = useMemo(() => activeTab === 'pending' ? bookings.filter((booking) => booking.status === 'pending') : bookings, [activeTab, bookings])
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  async function load() {
+    setLoading(true)
+    setError('')
+    try {
+      const today = startOfToday()
+      const [loadedSettings, loadedBookings] = await Promise.all([
+        request<Settings>('/api/v1/booking/settings'),
+        request<Booking[]>(`/api/v1/booking/reservations?from=${today}&to=${addDays(today, 90)}`),
+      ])
+      setSettings(loadedSettings)
+      setBookings(loadedBookings)
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : '加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function updateSchedule(weekday: number, patch: Partial<Schedule>) {
+    setSettings((current) => current ? { ...current, schedules: current.schedules.map((schedule) => schedule.weekday === weekday ? { ...schedule, ...patch } : schedule) } : current)
+  }
+
+  async function saveSettings() {
+    if (!settings) return
+    setSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      await request('/api/v1/booking/settings', { method: 'PUT', body: JSON.stringify({ bookingWindowDays: settings.bookingWindowDays, schedules: settings.schedules }) })
+      setMessage('排班设置已保存')
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : '保存失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function updateStatus(id: string, status: 'confirmed' | 'rejected') {
+    setWorkingId(id)
+    setError('')
+    setMessage('')
+    try {
+      const updated = await request<Booking>(`/api/v1/booking/reservations/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
+      setBookings((current) => current.map((booking) => booking.id === id ? updated : booking))
+      setMessage(status === 'confirmed' ? '预约已确认' : '预约已拒绝')
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : '操作失败')
+    } finally {
+      setWorkingId('')
+    }
+  }
+
+  return <div className="relative space-y-6 px-1 py-2 sm:px-2"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Waka Booking</p><h1 className="mt-2 font-display text-3xl text-foreground">预约排班</h1><p className="mt-2 text-sm text-muted-foreground">配置营业时间，处理哇咔印象的预约请求。</p></div><button type="button" onClick={() => void load()} className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-sm hover:bg-accent"><CalendarClock className="size-4" />刷新</button></div>{(error || message) && <div className={`rounded-2xl px-4 py-3 text-sm ${error ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{error || message}</div>}
+    <section className="rounded-[1.5rem] border border-border/70 bg-card/70 p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Opening hours</p><h2 className="mt-2 text-xl font-semibold">营业时间</h2></div><label className="flex items-center gap-3 text-sm">可预约天数<input type="number" min={1} max={90} value={settings?.bookingWindowDays || ''} onChange={(event) => setSettings((current) => current ? { ...current, bookingWindowDays: Number(event.target.value) } : current)} className="h-9 w-24 rounded-lg border border-border bg-background px-3" /><span className="text-muted-foreground">天</span></label></div>{loading || !settings ? <div className="flex min-h-36 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在加载设置</div> : <div className="mt-5 space-y-2">{settings.schedules.map((schedule) => <ScheduleRow key={schedule.weekday} schedule={schedule} label={WEEKDAYS[schedule.weekday - 1]} onChange={(patch) => updateSchedule(schedule.weekday, patch)} />)}</div>}<div className="mt-5 flex justify-end"><button type="button" disabled={saving || !settings} onClick={() => void saveSettings()} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50">{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}保存排班设置</button></div></section>
+    <section className="rounded-[1.5rem] border border-border/70 bg-card/70 p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Reservations</p><h2 className="mt-2 text-xl font-semibold">预约记录 <span className="ml-1 text-sm font-normal text-muted-foreground">{bookings.length}</span></h2></div><div className="flex rounded-full border border-border p-1 text-xs"><button type="button" onClick={() => setActiveTab('pending')} className={`rounded-full px-3 py-1.5 ${activeTab === 'pending' ? 'bg-foreground text-background' : 'text-muted-foreground'}`}>待确认 {bookings.filter((booking) => booking.status === 'pending').length}</button><button type="button" onClick={() => setActiveTab('all')} className={`rounded-full px-3 py-1.5 ${activeTab === 'all' ? 'bg-foreground text-background' : 'text-muted-foreground'}`}>全部</button></div></div>{loading ? <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" />正在加载预约</div> : visibleBookings.length === 0 ? <div className="rounded-2xl border border-dashed border-border/80 px-4 py-12 text-center text-sm text-muted-foreground">当前没有预约记录。</div> : <div className="mt-5 space-y-3">{visibleBookings.map((booking) => <BookingRow key={booking.id} booking={booking} working={workingId === booking.id} onUpdate={updateStatus} />)}</div>}</section>
+  </div>
+}
+
+function ScheduleRow({ schedule, label, onChange }: { schedule: Schedule; label: string; onChange: (patch: Partial<Schedule>) => void }) {
+  return <div className={`grid gap-3 rounded-2xl border p-3 sm:grid-cols-[5rem_minmax(0,1fr)_minmax(0,1fr)] sm:items-center ${schedule.enabled ? 'border-border/70 bg-background/60' : 'border-border/40 bg-muted/30'}`}><label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={schedule.enabled} onChange={(event) => onChange({ enabled: event.target.checked })} className="size-4 accent-foreground" />{label}</label><TimeSelect label="开始营业" value={schedule.openMinutes} disabled={!schedule.enabled} onChange={(value) => onChange({ openMinutes: value })} /><TimeSelect label="结束营业" value={schedule.closeMinutes} disabled={!schedule.enabled} onChange={(value) => onChange({ closeMinutes: value })} /></div>
+}
+
+function TimeSelect({ label, value, disabled, onChange }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void }) {
+  return <label className="flex items-center justify-between gap-3 text-xs text-muted-foreground"><span>{label}</span><span className="relative"><select value={value} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} className="h-9 w-28 appearance-none rounded-lg border border-border bg-background px-3 pr-8 text-sm text-foreground outline-none disabled:opacity-40">{TIME_OPTIONS.map((option) => <option key={option.minutes} value={option.minutes}>{option.label}</option>)}</select><ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" /></span></label>
+}
+
+function BookingRow({ booking, working, onUpdate }: { booking: Booking; working: boolean; onUpdate: (id: string, status: 'confirmed' | 'rejected') => void }) {
+  const contactLabel = booking.contactType === 'phone' ? '手机号' : booking.contactType === 'wechat' ? '微信号' : '其他联系方式'
+  return <article className="rounded-2xl border border-border/70 bg-background/60 p-4"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-medium text-foreground">{booking.date} · {booking.start}–{booking.end}</p><span className={`rounded-full px-2 py-1 text-[0.68rem] ${booking.status === 'pending' ? 'bg-accent text-accent-foreground' : booking.status === 'confirmed' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{statusLabel(booking.status)}</span></div><p className="mt-2 text-sm text-foreground">{booking.customerName || '未填写称呼'}</p><p className="mt-1 text-xs text-muted-foreground">{contactLabel}：{booking.contactValue}</p>{booking.note && <p className="mt-2 rounded-xl bg-muted/45 px-3 py-2 text-xs leading-5 text-muted-foreground">备注：{booking.note}</p>}</div>{booking.status === 'pending' && <div className="flex shrink-0 gap-2"><button type="button" disabled={working} onClick={() => onUpdate(booking.id, 'rejected')} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs text-muted-foreground hover:bg-accent disabled:opacity-50"><X className="size-3.5" />拒绝</button><button type="button" disabled={working} onClick={() => onUpdate(booking.id, 'confirmed')} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-foreground px-3 text-xs text-background hover:opacity-85 disabled:opacity-50">{working ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}确认预约</button></div>}</div></article>
+}

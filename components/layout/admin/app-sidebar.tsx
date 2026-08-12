@@ -79,6 +79,11 @@ export function AppSidebar({
         icon: CalendarDaysIcon,
       },
       {
+        title: '预约排班',
+        url: '/admin/booking',
+        icon: CalendarDaysIcon,
+      },
+      {
         title: t('Link.about'),
         url: '/admin/about',
         icon: GithubIcon,

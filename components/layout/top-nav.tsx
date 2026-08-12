@@ -65,9 +65,16 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
             <div className="scrollbar-hide mx-4 flex items-center gap-1 overflow-x-auto">
               {isWakaPage ? (
                 <>
-                  <span className="px-3 py-1 text-xs tracking-[0.18em] whitespace-nowrap text-muted-foreground">
+                  <Link
+                    href="/waka/booking"
+                    className={`px-3 py-1 text-xs tracking-[0.18em] whitespace-nowrap transition-colors ${
+                      pathname === '/waka/booking'
+                        ? 'text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
                     预约排班表
-                  </span>
+                  </Link>
                   <span className="px-3 py-1 text-xs tracking-[0.18em] whitespace-nowrap text-muted-foreground">
                     公开样片赏析
                   </span>

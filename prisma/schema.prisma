@@ -211,3 +211,48 @@ model VisitLog {
   @@index([ip])
   @@map("visit_logs")
 }
+
+model WakaBookingSettings {
+  id                String                 @id @default(cuid()) @db.VarChar(50)
+  bookingWindowDays Int                    @default(90) @map("booking_window_days") @db.SmallInt
+  slotMinutes       Int                    @default(30) @map("slot_minutes") @db.SmallInt
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamp
+  updatedAt         DateTime?              @updatedAt @map("updated_at") @db.Timestamp
+  schedules         WakaBookingSchedule[]
+
+  @@map("waka_booking_settings")
+}
+
+model WakaBookingSchedule {
+  id         String             @id @default(cuid()) @db.VarChar(50)
+  settingsId String             @map("settings_id") @db.VarChar(50)
+  weekday    Int                @db.SmallInt
+  enabled    Boolean            @default(true)
+  openMinutes Int               @map("open_minutes") @db.SmallInt
+  closeMinutes Int              @map("close_minutes") @db.SmallInt
+  settings   WakaBookingSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  @@unique([settingsId, weekday])
+  @@map("waka_booking_schedules")
+}
+
+model WakaBooking {
+  id           String   @id @default(cuid()) @db.VarChar(50)
+  bookingDate  DateTime @map("booking_date") @db.Date
+  startMinutes Int      @map("start_minutes") @db.SmallInt
+  endMinutes   Int      @map("end_minutes") @db.SmallInt
+  slotKey      String   @unique @map("slot_key") @db.VarChar(80)
+  contactType  String   @map("contact_type") @db.VarChar(20)
+  contactValue String   @map("contact_value") @db.VarChar(120)
+  customerName String?  @map("customer_name") @db.VarChar(80)
+  note         String?  @db.Text
+  status       String   @default("pending") @db.VarChar(20)
+  adminNote    String?  @map("admin_note") @db.Text
+  confirmedAt  DateTime? @map("confirmed_at") @db.Timestamp
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp
+
+  @@index([bookingDate, status])
+  @@index([contactType, contactValue])
+  @@map("waka_bookings")
+}

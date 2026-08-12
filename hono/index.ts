@@ -9,6 +9,7 @@ import daily from '~/hono/daily'
 import tasks from '~/hono/tasks'
 import backup from '~/hono/backup'
 import visits from '~/hono/visits'
+import booking from '~/hono/booking'
 import { HTTPException } from 'hono/http-exception'
 import { sessionMiddleware } from '~/hono/_lib/context'
 
@@ -34,5 +35,6 @@ route.route('/daily', daily)
 route.route('/tasks', tasks)
 route.route('/backup', backup)
 route.route('/visits', visits)
+route.route('/booking', booking)
 
 export default route
