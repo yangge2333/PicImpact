@@ -15,6 +15,8 @@ export async function generateMetadata() {
 export default async function WakaImpressionPage() {
   const rows = await cachedConfigsByKeys(['custom_title'])
   const title = toCustomInfo(rows).customTitle || '船长的摄影小屋'
+  const amapKey = process.env.AMAP_JS_API_KEY
+  const amapSecurityCode = process.env.AMAP_SECURITY_JSCODE
 
   return (
     <div className="min-h-[calc(100svh-2.5rem)] bg-background">
@@ -65,7 +67,10 @@ export default async function WakaImpressionPage() {
             1幢 2楼 · A-202
           </p>
           <div className="mt-6">
-            <WakaLocationMap />
+            <WakaLocationMap
+              apiKey={amapKey}
+              securityJsCode={amapSecurityCode}
+            />
           </div>
         </section>
       </section>
