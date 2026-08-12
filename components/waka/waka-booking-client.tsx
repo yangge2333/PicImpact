@@ -157,7 +157,7 @@ export function WakaBookingClient() {
   const currentDay = dayMap.get(selectedDate)
   const monthDays = useMemo(() => getMonthDays(visibleMonth), [visibleMonth])
   const firstDate = addDays(today, -30)
-  const lastDate = config ? addDays(today, config.bookingWindowDays - 1) : today
+  const lastDate = config ? addDays(today, config.bookingWindowDays) : today
   const selectedEnd = currentDay?.slots.find((slot) => slot.endMinutes === selectedEndMinutes) || null
   const currentOption = CONTACT_OPTIONS.find((option) => option.value === contactType) || CONTACT_OPTIONS[0]
   const historyOption = CONTACT_OPTIONS.find((option) => option.value === historyContactType) || CONTACT_OPTIONS[0]
@@ -168,7 +168,7 @@ export function WakaBookingClient() {
       try {
         const loadedConfig = await request<BookingConfig>('/api/waka/booking/config')
         const availability = await request<{ days: AvailabilityDay[] }>(
-          `/api/waka/booking/availability?from=${addDays(today, -30)}&to=${addDays(today, loadedConfig.bookingWindowDays - 1)}`
+          `/api/waka/booking/availability?from=${addDays(today, -30)}&to=${addDays(today, loadedConfig.bookingWindowDays)}`
         )
         if (!cancelled) {
           setConfig(loadedConfig)

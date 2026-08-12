@@ -106,7 +106,7 @@ export async function getOrCreateWakaBookingSettings() {
 
 export function isWithinBookingWindow(date: string, bookingWindowDays: number) {
   const today = getLocalDateKey()
-  const lastDate = addDateKeys(today, Math.max(bookingWindowDays - 1, 0))
+  const lastDate = addDateKeys(today, Math.max(bookingWindowDays, 0))
   return Boolean(lastDate && date > today && date <= lastDate)
 }
 

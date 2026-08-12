@@ -75,7 +75,7 @@ app.get('/availability', async (c) => {
   try {
     const settings = await getOrCreateWakaBookingSettings()
     const { from, to } = getDateRange(c.req.query('from'), c.req.query('to'))
-    const maxTo = addDateKeys(getLocalDateKey(), settings.bookingWindowDays - 1)
+    const maxTo = addDateKeys(getLocalDateKey(), settings.bookingWindowDays)
     if (!maxTo || to > maxTo) {
       throw badRequest('查询范围不能超过可预约时间范围')
     }
