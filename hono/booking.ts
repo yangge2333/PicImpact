@@ -135,70 +135,67 @@ app.put('/settings', async (c) => {
 app.post('/reservations', async (c) => {
   try {
     const body = await c.req.json<Record<string, unknown>>()
-    const fromDate = asString(body.fromDate || body.date)
-    const toDate = asString(body.toDate || fromDate)
-    const fromDateValue = parseDateKey(fromDate)
-    const toDateValue = parseDateKey(toDate)
-    const startMinutes = Number(body.startMinutes)
-    const endMinutes = Number(body.endMinutes)
+    const rawSelections = Array.isArray(body.selections)
+      ? body.selections
+      : [{ date: body.fromDate || body.date, startMinutes: body.startMinutes, endMinutes: body.endMinutes }]
+    const selections = rawSelections.map((value) => {
+      const row = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+      const date = asString(row.date)
+      return { date, dateValue: parseDateKey(date), startMinutes: Number(row.startMinutes), endMinutes: Number(row.endMinutes) }
+    })
     const contactType = asContactType(body.contactType)
     const contactValue = asString(body.contactValue)
     const customerName = asString(body.customerName)
     const note = asString(body.note)
 
-    if (!fromDateValue || !toDateValue || fromDate > toDate || !contactType || !Number.isInteger(startMinutes) || !Number.isInteger(endMinutes)) {
+    if (!selections.length || selections.length > 90 || !contactType || selections.some((selection) => !selection.dateValue || !Number.isInteger(selection.startMinutes) || !Number.isInteger(selection.endMinutes))) {
       throw badRequest('预约信息不完整')
+    }
+    if (new Set(selections.map((selection) => `${selection.date}:${selection.startMinutes}:${selection.endMinutes}`)).size !== selections.length) {
+      throw badRequest('预约明细不能重复')
     }
     if (contactValue.length < 2 || contactValue.length > 120 || customerName.length > 80 || note.length > 1000) {
       throw badRequest('预约信息长度或联系方式无效')
     }
 
-    const dateKeys: string[] = []
-    for (let date = fromDate; date <= toDate;) {
-      dateKeys.push(date)
-      const nextDate = addDateKeys(date, 1)
-      if (!nextDate) break
-      date = nextDate
-    }
-
     const settings = await getOrCreateWakaBookingSettings()
-    for (const date of dateKeys) {
-      const schedule = getScheduleForDate(settings.schedules, date)
+    for (const selection of selections) {
+      const schedule = getScheduleForDate(settings.schedules, selection.date)
       if (!schedule?.enabled) {
-        throw badRequest(`范围内包含不营业日期：${date}`)
+        throw badRequest(`${selection.date} 不营业`)
       }
       if (
-        startMinutes % settings.slotMinutes !== 0 ||
-        endMinutes % settings.slotMinutes !== 0 ||
-        endMinutes <= startMinutes ||
-        startMinutes < schedule.openMinutes ||
-        endMinutes > schedule.closeMinutes
+        selection.startMinutes % settings.slotMinutes !== 0 ||
+        selection.endMinutes % settings.slotMinutes !== 0 ||
+        selection.endMinutes <= selection.startMinutes ||
+        selection.startMinutes < schedule.openMinutes ||
+        selection.endMinutes > schedule.closeMinutes
       ) {
-        throw badRequest(`${date} 的时间段不可预约`)
+        throw badRequest(`${selection.date} 的时间段不可预约`)
       }
     }
 
     const bookings = await db.$transaction(async (tx) => {
       const createdBookings = []
-      for (const date of dateKeys) {
-        const bookingDate = parseDateKey(date) as Date
+      for (const selection of selections) {
+        const bookingDate = selection.dateValue as Date
         const overlapping = await tx.wakaBooking.findFirst({
           where: {
             bookingDate,
             status: { in: ['pending', 'confirmed'] },
-            startMinutes: { lt: endMinutes },
-            endMinutes: { gt: startMinutes },
+            startMinutes: { lt: selection.endMinutes },
+            endMinutes: { gt: selection.startMinutes },
           },
         })
         if (overlapping) {
-          throw conflict(`${date} 的时间段与已有预约重叠，请重新选择`)
+          throw conflict(`${selection.date} 的时间段与已有预约重叠，请重新选择`)
         }
         createdBookings.push(await tx.wakaBooking.create({
           data: {
             id: createId(),
             bookingDate,
-            startMinutes,
-            endMinutes,
+            startMinutes: selection.startMinutes,
+            endMinutes: selection.endMinutes,
             contactType,
             contactValue,
             customerName: customerName || null,

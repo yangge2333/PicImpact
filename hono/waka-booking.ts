@@ -141,18 +141,27 @@ app.get('/availability', async (c) => {
 app.post('/', async (c) => {
   try {
     const body = await c.req.json<Record<string, unknown>>()
-    const date = asString(body.date)
-    const dateValue = parseDateKey(date)
-    const startMinutes = Number(body.startMinutes)
-    const endMinutes = Number(body.endMinutes)
+    const rawRanges = Array.isArray(body.selections) ? body.selections : [body]
+    const ranges = rawRanges.map((value) => {
+      const row = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+      return {
+        date: asString(row.date),
+        dateValue: parseDateKey(asString(row.date)),
+        startMinutes: Number(row.startMinutes),
+        endMinutes: Number(row.endMinutes),
+      }
+    })
     const contactType = normalizeContactType(body.contactType)
     const contactValue = asString(body.contactValue)
     const customerName = asString(body.customerName)
     const note = asString(body.note)
     const ipAddress = getClientIp(c)
 
-    if (!dateValue || !contactType || !Number.isInteger(startMinutes) || !Number.isInteger(endMinutes)) {
+    if (!ranges.length || ranges.length > 90 || !contactType || ranges.some((range) => !range.dateValue || !Number.isInteger(range.startMinutes) || !Number.isInteger(range.endMinutes))) {
       throw badRequest('预约信息不完整')
+    }
+    if (new Set(ranges.map((range) => range.date)).size !== ranges.length) {
+      throw badRequest('同一天不能重复选择预约时段')
     }
     if (contactValue.length < 2 || contactValue.length > 120) {
       throw badRequest('请填写有效的联系方式')
@@ -162,22 +171,24 @@ app.post('/', async (c) => {
     }
 
     const settings = await getOrCreateWakaBookingSettings()
-    await assertBookableDate(date, settings.bookingWindowDays)
-    const schedule = getScheduleForDate(settings.schedules, date)
-    if (!schedule?.enabled) {
-      throw badRequest('这一天暂不营业')
-    }
-    if (
-      startMinutes % settings.slotMinutes !== 0 ||
-      endMinutes % settings.slotMinutes !== 0 ||
-      endMinutes <= startMinutes ||
-      startMinutes < schedule.openMinutes ||
-      endMinutes > schedule.closeMinutes
-    ) {
-      throw badRequest('该时间段不可预约')
+    for (const range of ranges) {
+      await assertBookableDate(range.date, settings.bookingWindowDays)
+      const schedule = getScheduleForDate(settings.schedules, range.date)
+      if (!schedule?.enabled) {
+        throw badRequest(`${range.date} 暂不营业`)
+      }
+      if (
+        range.startMinutes % settings.slotMinutes !== 0 ||
+        range.endMinutes % settings.slotMinutes !== 0 ||
+        range.endMinutes <= range.startMinutes ||
+        range.startMinutes < schedule.openMinutes ||
+        range.endMinutes > schedule.closeMinutes
+      ) {
+        throw badRequest(`${range.date} 的时间段不可预约`)
+      }
     }
 
-    const booking = await db.$transaction(async (tx) => {
+    const bookings = await db.$transaction(async (tx) => {
       const { start: todayStart, end: tomorrowStart } = getLocalDayRange()
       const sameDayBooking = await tx.wakaBooking.findFirst({
         where: { ipAddress, createdAt: { gte: todayStart, lt: tomorrowStart } },
@@ -185,34 +196,38 @@ app.post('/', async (c) => {
       if (sameDayBooking) {
         throw conflict('这个 IP 今天已经预约过了，请联系管理员：13634085297')
       }
-      const overlapping = await tx.wakaBooking.findFirst({
-        where: {
-          bookingDate: dateValue,
-          status: { in: ['pending', 'confirmed'] },
-          startMinutes: { lt: endMinutes },
-          endMinutes: { gt: startMinutes },
-        },
-      })
-      if (overlapping) {
-        throw conflict('所选时间段与已有预约重叠，请重新选择')
+      const createdBookings = []
+      for (const range of ranges) {
+        const overlapping = await tx.wakaBooking.findFirst({
+          where: {
+            bookingDate: range.dateValue as Date,
+            status: { in: ['pending', 'confirmed'] },
+            startMinutes: { lt: range.endMinutes },
+            endMinutes: { gt: range.startMinutes },
+          },
+        })
+        if (overlapping) {
+          throw conflict(`${range.date} 的时间段与已有预约重叠，请重新选择`)
+        }
+        createdBookings.push(await tx.wakaBooking.create({
+          data: {
+            id: createId(),
+            bookingDate: range.dateValue as Date,
+            startMinutes: range.startMinutes,
+            endMinutes: range.endMinutes,
+            contactType,
+            contactValue,
+            ipAddress,
+            customerName: customerName || null,
+            note: note || null,
+            status: 'pending',
+          },
+        }))
       }
-      return tx.wakaBooking.create({
-        data: {
-          id: createId(),
-          bookingDate: dateValue,
-          startMinutes,
-          endMinutes,
-          contactType,
-          contactValue,
-          ipAddress,
-          customerName: customerName || null,
-          note: note || null,
-          status: 'pending',
-        },
-      })
+      return createdBookings
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
-    return ok(c, serializeBooking(booking))
+    return ok(c, bookings.length === 1 ? serializeBooking(bookings[0]) : bookings.map(serializeBooking))
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code)) {
       throw conflict('该时间段刚刚被预约，请重新选择')

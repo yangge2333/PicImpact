@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { CopyAddressButton } from '~/components/layout/theme/copy-address-button'
 import { WakaLocationMap } from '~/components/layout/theme/waka-location-map'
 import { cachedConfigsByKeys } from '~/server/lib/cache'
 import { toCustomInfo } from '~/server/lib/config-transform'
@@ -63,9 +64,12 @@ export default async function WakaImpressionPage() {
           >
             杭州国脉科技园
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            1幢 2楼 · A-202
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <p className="text-sm leading-6 text-muted-foreground">
+              1幢 2楼 · A-202
+            </p>
+            <CopyAddressButton address="浙江省杭州市钱塘区4号大街28号国脉科技园1幢2楼 A-202" />
+          </div>
           <div className="mt-6">
             <WakaLocationMap
               apiKey={amapKey}

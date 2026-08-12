@@ -37,6 +37,14 @@ type DaySelection = {
   endMinutes: number | null
 }
 
+type SelectedRange = {
+  date: string
+  startMinutes: number
+  endMinutes: number
+  start: string
+  end: string
+}
+
 type Booking = {
   id: string
   date: string
@@ -145,7 +153,7 @@ export function WakaBookingClient() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState<Booking | null>(null)
+  const [success, setSuccess] = useState<Booking[] | null>(null)
   const [contactType, setContactType] = useState('phone')
   const [contactValue, setContactValue] = useState('')
   const [customerName, setCustomerName] = useState('')
@@ -165,7 +173,14 @@ export function WakaBookingClient() {
   const selectedSelection = selections[selectedDate] || { startMinutes: null, endMinutes: null }
   const selectedStart = currentDay?.slots.find((slot) => slot.startMinutes === selectedSelection.startMinutes) || null
   const selectedEndMinutes = selectedSelection.endMinutes
-  const selectedEnd = currentDay?.slots.find((slot) => slot.endMinutes === selectedEndMinutes) || null
+  const selectedRanges = useMemo<SelectedRange[]>(() => days.flatMap((day) => {
+    if (day.date <= today) return []
+    const selection = selections[day.date]
+    if (selection?.startMinutes === null || selection?.startMinutes === undefined || selection.endMinutes === null || selection.endMinutes === undefined) return []
+    const start = day.slots.find((slot) => slot.startMinutes === selection.startMinutes)
+    const end = day.slots.find((slot) => slot.endMinutes === selection.endMinutes)
+    return start && end ? [{ date: day.date, startMinutes: start.startMinutes, endMinutes: end.endMinutes, start: start.start, end: end.end }] : []
+  }), [days, selections, today])
   const currentOption = CONTACT_OPTIONS.find((option) => option.value === contactType) || CONTACT_OPTIONS[0]
   const historyOption = CONTACT_OPTIONS.find((option) => option.value === historyContactType) || CONTACT_OPTIONS[0]
 
@@ -213,28 +228,31 @@ export function WakaBookingClient() {
 
   async function submitBooking(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!selectedStart || !selectedEndMinutes || selectedDate <= today) return
+    if (!selectedRanges.length) return
     setSubmitting(true)
     setError('')
     setSuccess(null)
     try {
-      const booking = await request<Booking>('/api/waka/booking', {
+      const response = await request<Booking | Booking[]>('/api/waka/booking', {
         method: 'POST',
         body: JSON.stringify({
-          date: selectedDate,
-          startMinutes: selectedStart.startMinutes,
-          endMinutes: selectedEndMinutes,
+          selections: selectedRanges.map((range) => ({ date: range.date, startMinutes: range.startMinutes, endMinutes: range.endMinutes })),
           contactType,
           contactValue,
           customerName,
           note,
         }),
       })
-      setSuccess(booking)
+      const bookings = Array.isArray(response) ? response : [response]
+      setSuccess(bookings)
       setContactValue('')
       setCustomerName('')
       setNote('')
-      setSelections((current) => ({ ...current, [selectedDate]: { startMinutes: null, endMinutes: null } }))
+      setSelections((current) => {
+        const next = { ...current }
+        selectedRanges.forEach((range) => { next[range.date] = { startMinutes: null, endMinutes: null } })
+        return next
+      })
       const refreshed = await request<{ days: AvailabilityDay[] }>(
         `/api/waka/booking/availability?from=${firstDate}&to=${lastDate}`
       )
@@ -342,15 +360,16 @@ export function WakaBookingClient() {
             </section>
           </div>
 
-          {selectedStart && selectedEnd && selectedDate > today && (
+          {selectedRanges.length > 0 && (
             <form onSubmit={submitBooking} className="rounded-2xl border border-border/70 bg-card/70 p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Your booking</p>
-                  <h2 className="mt-2 text-xl font-semibold text-foreground">{formatDate(selectedDate)} · {selectedStart.start}–{selectedEnd.end}</h2>
+                  <h2 className="mt-2 text-xl font-semibold text-foreground">已选择 {selectedRanges.length} 天预约</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">提交后等待船长确认</p>
               </div>
+              <div className="mt-4 flex flex-wrap gap-2">{selectedRanges.map((range) => <span key={range.date} className="rounded-lg bg-muted/60 px-3 py-1.5 text-xs text-foreground">{formatDate(range.date)} · {range.start}–{range.end}</span>)}</div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <label className="text-sm text-foreground">称呼（可选）<input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="怎么称呼你" className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
                 <label className="text-sm text-foreground">联系方式 <span className="text-destructive">*</span><input required value={contactValue} onChange={(event) => setContactValue(event.target.value)} placeholder={currentOption.placeholder} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
@@ -359,7 +378,7 @@ export function WakaBookingClient() {
                 {CONTACT_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => setContactType(option.value)} className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${contactType === option.value ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:bg-accent'}`}>{option.label}</button>)}
               </div>
               <label className="mt-4 block text-sm text-foreground">备注（可选）<textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="比如拍摄主题、人数或其他想提前说明的事" className="mt-2 w-full resize-none rounded-xl border border-border bg-background p-3 outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" /></label>
-              {(error || success) && <div className={`mt-4 rounded-xl px-3 py-3 text-sm ${success ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{success ? `预约已提交：${success.date} ${success.start}–${success.end}，等待确认。` : error}</div>}
+              {(error || success) && <div className={`mt-4 rounded-xl px-3 py-3 text-sm ${success ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{success ? `已提交 ${success.length} 天预约，等待船长确认。` : error}</div>}
               <button type="submit" disabled={submitting} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto">{submitting && <Loader2 className="size-4 animate-spin" />}提交预约</button>
             </form>
           )}
