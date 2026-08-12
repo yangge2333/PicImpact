@@ -43,7 +43,9 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
   const themeToggleLabel = isHydrated
     ? t(resolvedTheme === 'light' ? 'Button.dark' : 'Button.light')
     : t('Button.theme')
+  const isWakaPage = pathname === '/waka' || pathname.startsWith('/waka/')
   const showAlbumTabs = pathname !== '/'
+  const navigationTitle = isWakaPage ? '哇咔印象' : props.title || 'PicImpact'
 
   return (
     <>
@@ -52,66 +54,81 @@ export default function TopNav(props: Readonly<AlbumDataProps>) {
         <nav className="relative flex h-10 items-center justify-between px-2.5 sm:px-4 lg:px-6">
           {/* Left: Site logo/name */}
           <Link
-            href="/"
+            href={isWakaPage ? '/waka' : '/'}
             className="shrink-0 font-display text-sm font-semibold tracking-normal text-foreground/88 transition-opacity hover:opacity-70"
           >
-            {props.title || 'PicImpact'}
+            {navigationTitle}
           </Link>
 
           {/* Center: Album tabs */}
           {showAlbumTabs && (
             <div className="scrollbar-hide mx-4 flex items-center gap-1 overflow-x-auto">
-              <Link
-                href="/"
-                className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                  isActiveTab('/')
-                    ? 'text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t('Link.home')}
-              </Link>
-              {Array.isArray(props.data) && props.data.length > 0 &&
-                props.data.map((album: AlbumType) => (
+              {isWakaPage ? (
+                <>
+                  <span className="px-3 py-1 text-xs tracking-[0.18em] whitespace-nowrap text-muted-foreground">
+                    预约排班表
+                  </span>
+                  <span className="px-3 py-1 text-xs tracking-[0.18em] whitespace-nowrap text-muted-foreground">
+                    公开样片赏析
+                  </span>
+                </>
+              ) : (
+                <>
                   <Link
-                    key={album.id}
-                    href={album.album_value}
+                    href="/"
                     className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                      isActiveTab(album.album_value)
+                      isActiveTab('/')
                         ? 'text-foreground'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {album.name}
+                    {t('Link.home')}
                   </Link>
-                ))
-              }
+                  {Array.isArray(props.data) && props.data.length > 0 &&
+                    props.data.map((album: AlbumType) => (
+                      <Link
+                        key={album.id}
+                        href={album.album_value}
+                        className={`px-3 py-1 text-xs uppercase tracking-[0.18em] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                          isActiveTab(album.album_value)
+                            ? 'text-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {album.name}
+                      </Link>
+                    ))
+                  }
+                </>
+              )}
             </div>
           )}
 
           {/* Right: Icon buttons */}
           <div className="flex shrink-0 items-center gap-1">
             <Link
-              href="/waka"
-              aria-current={pathname === '/waka' ? 'page' : undefined}
+              href={isWakaPage ? '/' : '/waka'}
+              aria-current={!isWakaPage ? 'page' : undefined}
               className={`group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:-translate-y-px hover:shadow-sm sm:px-3 ${
-                pathname === '/waka'
-                  ? 'border-foreground/30 bg-foreground/10 text-foreground shadow-sm'
-                  : 'border-accent-foreground/15 bg-accent/70 text-accent-foreground hover:border-accent-foreground/30 hover:bg-accent'
+                isWakaPage
+                  ? 'border-accent-foreground/15 bg-accent/70 text-accent-foreground hover:border-accent-foreground/30 hover:bg-accent'
+                  : 'border-foreground/30 bg-foreground/10 text-foreground shadow-sm'
               }`}
             >
               <Sparkles className="size-3.5 transition-transform duration-300 group-hover:rotate-12" />
-              哇咔印象
+              {isWakaPage ? '船长的摄影小屋' : '哇咔印象'}
             </Link>
-            <Link
-              href="/about"
-              aria-current={pathname === '/about' ? 'page' : undefined}
-              className={`px-1.5 py-1 text-xs font-medium transition-colors hover:text-foreground sm:px-2 ${
-                pathname === '/about' ? 'text-foreground' : 'text-muted-foreground'
-              }`}
-            >
-              关于我
-            </Link>
+            {!isWakaPage && (
+              <Link
+                href="/about"
+                aria-current={pathname === '/about' ? 'page' : undefined}
+                className={`px-1.5 py-1 text-xs font-medium transition-colors hover:text-foreground sm:px-2 ${
+                  pathname === '/about' ? 'text-foreground' : 'text-muted-foreground'
+                }`}
+              >
+                关于我
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setCommand(true)}
