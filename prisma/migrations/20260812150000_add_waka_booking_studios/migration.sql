@@ -11,18 +11,18 @@ CREATE TABLE "waka_booking_studios" (
 INSERT INTO "waka_booking_studios" ("id", "name", "sort")
 VALUES ('waka-studio-white-1', '白棚1', 0);
 
-ALTER TABLE "waka_booking" ADD COLUMN "studio_id" VARCHAR(50);
+ALTER TABLE "waka_bookings" ADD COLUMN "studio_id" VARCHAR(50);
 
-UPDATE "waka_booking"
+UPDATE "waka_bookings"
 SET "studio_id" = 'waka-studio-white-1'
 WHERE "studio_id" IS NULL;
 
-ALTER TABLE "waka_booking" ALTER COLUMN "studio_id" SET NOT NULL;
+ALTER TABLE "waka_bookings" ALTER COLUMN "studio_id" SET NOT NULL;
 
-ALTER TABLE "waka_booking"
+ALTER TABLE "waka_bookings"
     ADD CONSTRAINT "waka_booking_studio_id_fkey"
     FOREIGN KEY ("studio_id") REFERENCES "waka_booking_studios"("id")
     ON DELETE RESTRICT ON UPDATE CASCADE;
 
 CREATE INDEX "waka_booking_studio_id_booking_date_status_idx"
-    ON "waka_booking"("studio_id", "booking_date", "status");
+    ON "waka_bookings"("studio_id", "booking_date", "status");
