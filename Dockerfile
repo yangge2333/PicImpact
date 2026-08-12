@@ -57,7 +57,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=runner-base --chown=nextjs:nodejs /app/node_modules ./node_modules
 # Prisma Client is generated from the current schema in the builder stage.
 # Keep the generated runtime alongside the runner dependencies.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/public ./public
 COPY ./prisma ./prisma
 COPY ./scripts ./scripts
