@@ -157,7 +157,7 @@ export function WakaBookingClient() {
   const [selectedDate, setSelectedDate] = useState(today)
   const [selections, setSelections] = useState<Record<string, DaySelection>>({})
   const [visibleMonth, setVisibleMonth] = useState(monthKey(today))
-  const [calendarExpanded, setCalendarExpanded] = useState(false)
+  const [calendarExpanded, setCalendarExpanded] = useState(true)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -192,6 +192,10 @@ export function WakaBookingClient() {
   }), [days, selections, today])
   const currentOption = CONTACT_OPTIONS.find((option) => option.value === contactType) || CONTACT_OPTIONS[0]
   const historyOption = CONTACT_OPTIONS.find((option) => option.value === historyContactType) || CONTACT_OPTIONS[0]
+
+  useEffect(() => {
+    setCalendarExpanded(window.matchMedia('(min-width: 768px)').matches)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
