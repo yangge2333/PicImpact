@@ -3,6 +3,7 @@ import 'server-only'
 import { createId } from '@paralleldrive/cuid2'
 import { Prisma } from '@prisma/client'
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 
 import {
   CONTACT_TYPES,
@@ -115,7 +116,7 @@ app.get('/availability', async (c) => {
 
     return ok(c, { from, to, days })
   } catch (error) {
-    if (error instanceof Error && error.name === 'HTTPException') {
+    if (error instanceof HTTPException) {
       throw error
     }
     throw serverError('Failed to fetch booking availability', error)
@@ -192,7 +193,7 @@ app.post('/', async (c) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code)) {
       throw conflict('该时间段刚刚被预约，请重新选择')
     }
-    if (error instanceof Error && error.name === 'HTTPException') {
+    if (error instanceof HTTPException) {
       throw error
     }
     throw serverError('Failed to create booking', error)
@@ -213,7 +214,7 @@ app.get('/history', async (c) => {
     })
     return ok(c, bookings.filter((booking) => isActiveBooking(booking.status) || booking.status === 'rejected' || booking.status === 'cancelled').map(serializeBooking))
   } catch (error) {
-    if (error instanceof Error && error.name === 'HTTPException') {
+    if (error instanceof HTTPException) {
       throw error
     }
     throw serverError('Failed to fetch booking history', error)
