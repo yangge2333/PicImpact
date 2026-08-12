@@ -26,6 +26,7 @@ type Slot = {
   end: string
   available: boolean
   booked: boolean
+  customerName: string | null
 }
 
 type AvailabilityDay = {
@@ -491,39 +492,43 @@ function SlotGroups({ slots, selectedStart, selectedEndMinutes, readOnly, onSele
     }
   }, [draggingEdge, onMoveEnd, onMoveStart, selectedEndMinutes, selectedStartMinutes, slots])
 
-  return <div className="mt-7 space-y-5">
-    {readOnly && <div className="rounded-xl bg-muted/45 px-3 py-3 text-sm text-muted-foreground">这是历史排班，仅供查看，不能提交预约。</div>}
-    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击时间格选择开始时间'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div></div>}
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/70">
-      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border/70 bg-muted/25 px-3 py-2 text-xs text-muted-foreground"><span>时间</span><span>{selectedStart ? '点击时间线选择结束时间' : '点击时间线选择开始时间'}</span><span /></div>
-      <div className="max-h-[31rem] overflow-y-auto">
-        {slots.map((slot) => {
-          const isSelectedStart = selectedStartMinutes === slot.startMinutes
-          const isSelectedRange = selectedStartMinutes !== null && selectedEndMinutes !== null && slot.startMinutes >= selectedStartMinutes && slot.endMinutes <= selectedEndMinutes
-          const canChooseEnd = Boolean(selectedStart && endOptions.some((option) => option.endMinutes === slot.endMinutes))
-          const canChoose = !readOnly && (slot.available || canChooseEnd)
-          return <div key={slot.start} data-slot-start={slot.startMinutes} className="grid min-h-12 grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border/60 last:border-b-0">
-            <div className="flex items-start justify-end px-3 py-2 text-xs tabular-nums text-muted-foreground">{slot.start}</div>
-            <button type="button" disabled={!canChoose} onClick={() => {
-              if (!selectedStart) {
-                onSelectStart(slot)
-              } else if (slot.startMinutes === selectedStart.startMinutes && canChooseEnd) {
-                onSelectEnd(slot)
-              } else if (slot.startMinutes < selectedStart.startMinutes) {
-                onSelectStart(slot)
-              } else if (canChooseEnd) {
-                onSelectEnd(slot)
-              }
-            }} className={`relative mx-1 flex min-h-10 items-center justify-center px-2 py-2 text-center text-sm transition-colors before:absolute before:left-0 before:right-0 before:top-1/2 before:border-t ${isSelectedStart ? 'before:border-foreground' : isSelectedRange ? 'before:border-accent-foreground/60' : slot.booked ? 'before:border-muted-foreground/25' : slot.available ? 'before:border-border' : 'before:border-border/50'}`}>
-              <span className={`relative z-10 px-2 ${isSelectedStart ? 'bg-foreground text-background' : isSelectedRange ? 'bg-accent text-accent-foreground' : slot.booked ? 'bg-muted text-muted-foreground/55' : slot.available ? 'bg-background text-foreground' : 'bg-muted/30 text-muted-foreground/35'}`}>{slot.booked ? '已预约' : isSelectedStart ? '开始时间' : isSelectedRange ? '已选时间段' : slot.available ? '可预约' : '不可预约'}</span>
-              {!readOnly && isSelectedStart && <span aria-label="拖动开始时间" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); setDraggingEdge('start') }} className="absolute left-0 top-1/2 z-20 size-3 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize touch-none rounded-full bg-foreground ring-2 ring-background" />}
-              {!readOnly && selectedEndMinutes === slot.endMinutes && <span aria-label="拖动结束时间" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); setDraggingEdge('end') }} className="absolute right-0 top-1/2 z-20 size-3 translate-x-1/2 -translate-y-1/2 cursor-ew-resize touch-none rounded-full bg-foreground ring-2 ring-background" />}
-            </button>
-            <div className="flex items-start px-3 py-2 text-xs tabular-nums text-muted-foreground">{slot.end}</div>
-          </div>
-        })}
+  return <div className="mt-6 space-y-4">
+    {readOnly && <div className="rounded-lg border border-border/60 bg-muted/35 px-3.5 py-3 text-sm text-muted-foreground">这是历史排班，仅供查看，不能提交预约。</div>}
+    {!readOnly && <div className="rounded-xl border border-border/70 bg-background px-4 py-3.5 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{selectedStart ? '正在设置预约时段' : '选择预约时段'}</p><p className="mt-1 text-sm font-semibold text-foreground">{selectedStart ? <><span>{selectedStart.start}</span><span className="mx-2 text-muted-foreground">至</span>{selectedEndMinutes ? <span>{slots.find((slot) => slot.endMinutes === selectedEndMinutes)?.end}</span> : <span className="font-normal text-muted-foreground">请选择结束时间</span>}</> : '先点击一个空档开始选择'}</p></div><div className="flex shrink-0 items-center gap-2">{selectedStart && <button type="button" onClick={onResetSelection} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">改选开始</button>}<button type="button" disabled={!allDayAvailable} onClick={onSelectWholeDay} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40">预约全天</button></div></div></div>}
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-background/70">
+      <div className="flex items-center justify-between border-b border-border/70 bg-muted/20 px-4 py-3"><div><p className="text-xs font-medium text-foreground">时间安排</p><p className="mt-0.5 text-[11px] text-muted-foreground">{selectedStart ? '选择结束时间' : '选择开始时间'}</p></div><span className="text-[11px] tabular-nums text-muted-foreground">每格 1 小时</span></div>
+      <div className="max-h-[31rem] overflow-y-auto p-2 sm:p-3">
+        <div className="space-y-2">
+          {slots.map((slot) => {
+            const isSelectedStart = selectedStartMinutes === slot.startMinutes
+            const isSelectedRange = selectedStartMinutes !== null && selectedEndMinutes !== null && slot.startMinutes >= selectedStartMinutes && slot.endMinutes <= selectedEndMinutes
+            const canChooseEnd = Boolean(selectedStart && endOptions.some((option) => option.endMinutes === slot.endMinutes))
+            const canChoose = !readOnly && (slot.available || canChooseEnd)
+            const status = slot.booked ? '已预约' : isSelectedStart ? '开始时间' : isSelectedRange ? '已选时间段' : slot.available ? '可预约' : '不可预约'
+            const tone = isSelectedStart ? 'border-foreground bg-foreground text-background shadow-sm' : isSelectedRange ? 'border-accent-foreground/20 bg-accent text-accent-foreground' : slot.booked ? 'border-border/60 bg-muted/60 text-muted-foreground' : slot.available ? 'border-border/70 bg-background text-foreground hover:border-foreground/30 hover:bg-accent/40' : 'border-border/40 bg-muted/25 text-muted-foreground/45'
+            return <div key={slot.start} data-slot-start={slot.startMinutes} className="grid grid-cols-[4.75rem_minmax(0,1fr)] items-stretch gap-2 sm:gap-3">
+              <div className="flex flex-col justify-center px-1 text-right"><span className="text-xs font-medium tabular-nums text-foreground">{slot.start}</span><span className="mt-1 text-[11px] tabular-nums text-muted-foreground">至 {slot.end}</span></div>
+              <button type="button" disabled={!canChoose} aria-label={`${slot.start} 至 ${slot.end}，${status}${slot.customerName ? `，CN：${slot.customerName}` : ''}`} onClick={() => {
+                if (!selectedStart) {
+                  onSelectStart(slot)
+                } else if (slot.startMinutes === selectedStart.startMinutes && canChooseEnd) {
+                  onSelectEnd(slot)
+                } else if (slot.startMinutes < selectedStart.startMinutes) {
+                  onSelectStart(slot)
+                } else if (canChooseEnd) {
+                  onSelectEnd(slot)
+                }
+              }} className={`group relative flex min-h-14 items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-left text-sm transition-all disabled:cursor-default ${tone}`}>
+                <div className="flex min-w-0 items-center gap-2.5"><span aria-hidden className={`size-2 shrink-0 rounded-full ${isSelectedStart ? 'bg-background' : isSelectedRange ? 'bg-accent-foreground/70' : slot.booked ? 'bg-muted-foreground/40' : slot.available ? 'bg-primary' : 'bg-muted-foreground/25'}`} /><div className="min-w-0"><p className="font-medium">{status}</p>{slot.booked && slot.customerName && <p className="mt-1 truncate text-xs text-current/70">CN：{slot.customerName}</p>}</div></div>
+                {!slot.booked && <span className="shrink-0 text-[11px] text-current/60">{isSelectedStart ? '拖动调整' : slot.available ? '点击选择' : ''}</span>}
+                {!readOnly && selectedEndMinutes !== null && isSelectedStart && <span aria-label="拖动开始时间" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); setDraggingEdge('start') }} className="absolute -left-1.5 top-1/2 z-20 size-3 -translate-y-1/2 cursor-ns-resize touch-none rounded-full border-2 border-background bg-foreground shadow-sm" />}
+                {!readOnly && selectedEndMinutes === slot.endMinutes && <span aria-label="拖动结束时间" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); setDraggingEdge('end') }} className="absolute -right-1.5 top-1/2 z-20 size-3 -translate-y-1/2 cursor-ns-resize touch-none rounded-full border-2 border-background bg-foreground shadow-sm" />}
+              </button>
+            </div>
+          })}
+        </div>
       </div>
-      {selectedStart && !readOnly && <div className="border-t border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">结束边界可选至：{endOptions.length ? `${endOptions[0].end}–${endOptions[endOptions.length - 1].end}` : '暂无连续空档'}</div>}
+      {selectedStart && !readOnly && <div className="border-t border-border/70 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">结束时间可选至：{endOptions.length ? `${endOptions[0].end}–${endOptions[endOptions.length - 1].end}` : '暂无连续空档'}</div>}
     </div>
   </div>
 }

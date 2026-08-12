@@ -162,20 +162,21 @@ export function isClosedDate(closedDates: Array<{ date: Date }>, date: string) {
 export function buildSlots(
   schedule: { enabled: boolean; openMinutes: number; closeMinutes: number },
   slotMinutes: number,
-  bookedRanges: Array<{ startMinutes: number; endMinutes: number }>,
+  bookedRanges: Array<{ startMinutes: number; endMinutes: number; customerName: string | null }>,
   minimumStartMinutes?: number,
 ) {
   if (!schedule.enabled) {
     return []
   }
 
-  const slots: Array<{ startMinutes: number; endMinutes: number; start: string; end: string; available: boolean; booked: boolean }> = []
+  const slots: Array<{ startMinutes: number; endMinutes: number; start: string; end: string; available: boolean; booked: boolean; customerName: string | null }> = []
   for (
     let startMinutes = schedule.openMinutes;
     startMinutes + slotMinutes <= schedule.closeMinutes;
     startMinutes += slotMinutes
   ) {
-    const booked = bookedRanges.some((range) => range.startMinutes < startMinutes + slotMinutes && range.endMinutes > startMinutes)
+    const bookedRange = bookedRanges.find((range) => range.startMinutes < startMinutes + slotMinutes && range.endMinutes > startMinutes)
+    const booked = Boolean(bookedRange)
     const passed = minimumStartMinutes !== undefined && startMinutes < minimumStartMinutes
     slots.push({
       startMinutes,
@@ -184,6 +185,7 @@ export function buildSlots(
       end: formatMinutes(startMinutes + slotMinutes),
       available: !booked && !passed,
       booked,
+      customerName: bookedRange?.customerName || null,
     })
   }
   return slots

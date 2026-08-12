@@ -114,14 +114,14 @@ app.get('/availability', async (c) => {
         bookingDate: { gte: fromDate, lt: toExclusive },
         status: { in: ['pending', 'confirmed'] },
       },
-      select: { bookingDate: true, startMinutes: true, endMinutes: true },
+      select: { bookingDate: true, startMinutes: true, endMinutes: true, customerName: true },
     })
 
-    const bookedByDate = new Map<string, Array<{ startMinutes: number; endMinutes: number }>>()
+    const bookedByDate = new Map<string, Array<{ startMinutes: number; endMinutes: number; customerName: string | null }>>()
     for (const booking of bookings) {
       const date = booking.bookingDate.toISOString().slice(0, 10)
       const ranges = bookedByDate.get(date) || []
-      ranges.push({ startMinutes: booking.startMinutes, endMinutes: booking.endMinutes })
+      ranges.push({ startMinutes: booking.startMinutes, endMinutes: booking.endMinutes, customerName: booking.customerName })
       bookedByDate.set(date, ranges)
     }
 
