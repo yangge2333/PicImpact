@@ -53,6 +53,7 @@ export type ImageType = {
   show_on_mainpage: number;
   sort: number;
   hero_position: number;
+  hero_position_y: number;
   album_name: string;
   album_value: string;
   album_license: string;

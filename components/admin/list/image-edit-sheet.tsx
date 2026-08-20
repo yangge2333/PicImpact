@@ -244,6 +244,25 @@ export default function ImageEditSheet(props : Readonly<ImageServerHandleProps &
               className="mt-2 w-full border-none p-0 focus:border-transparent focus:outline-none focus:ring-0 sm:text-sm"
             />
           </label>
+          <label
+            htmlFor="hero_position_y"
+            className="block overflow-hidden rounded-md border border-input px-3 py-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary"
+          >
+            <span className="text-xs font-medium text-gray-700">首页风琴 Y 轴偏移百分比</span>
+            <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">
+              0 为居中，100 展示图片最下方，-100 展示图片最上方。
+            </span>
+
+            <input
+              type="number"
+              id="hero_position_y"
+              min={-100}
+              max={100}
+              value={image?.hero_position_y ?? 0}
+              onChange={(e) => setImageEditData({...image, hero_position_y: Number(e.target.value)})}
+              className="mt-2 w-full border-none p-0 focus:border-transparent focus:outline-none focus:ring-0 sm:text-sm"
+            />
+          </label>
           <TagInput
             tags={!image.labels ? [] : image.labels.map((label: string) => ({ id: Math.floor(Math.random() * 1000), text: label }))}
             setTags={(newTags: any) => {

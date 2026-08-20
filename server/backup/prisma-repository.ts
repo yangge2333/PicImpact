@@ -148,6 +148,7 @@ function mapImageRecord(image: {
   show: number;
   show_on_mainpage: number;
   sort: number;
+  hero_position_y: number;
   del: number;
   createdAt: Date;
   updatedAt: Date | null;
@@ -171,6 +172,7 @@ function mapImageRecord(image: {
     show: image.show,
     show_on_mainpage: image.show_on_mainpage,
     sort: image.sort,
+    hero_position_y: image.hero_position_y,
     del: image.del,
     createdAt: image.createdAt.toISOString(),
     updatedAt: toIsoString(image.updatedAt),
@@ -236,6 +238,7 @@ export class PrismaBackupRepository implements BackupRepository {
           show: true,
           show_on_mainpage: true,
           sort: true,
+          hero_position_y: true,
           del: true,
           createdAt: true,
           updatedAt: true,
@@ -416,6 +419,7 @@ export class PrismaBackupRepository implements BackupRepository {
             show: image.show,
             show_on_mainpage: image.show_on_mainpage,
             sort: image.sort,
+            hero_position_y: image.hero_position_y ?? 0,
             del: image.del,
             createdAt: new Date(image.createdAt),
           },
@@ -438,6 +442,7 @@ export class PrismaBackupRepository implements BackupRepository {
             show: image.show,
             show_on_mainpage: image.show_on_mainpage,
             sort: image.sort,
+            hero_position_y: image.hero_position_y ?? 0,
             del: image.del,
             createdAt: new Date(image.createdAt),
             updatedAt: image.updatedAt ? new Date(image.updatedAt) : undefined,

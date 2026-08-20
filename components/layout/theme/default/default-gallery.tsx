@@ -75,11 +75,13 @@ function HeroImage({
   priority = false,
   sizes = HERO_IMAGE_SIZES,
   heroPosition = 0,
+  heroPositionY = 0,
 }: {
   photo?: ImageType
   priority?: boolean
   sizes?: string
   heroPosition?: number
+  heroPositionY?: number
 }) {
   if (!photo) {
     return <div className="absolute inset-0 bg-[linear-gradient(135deg,#191713,#5b5148_45%,#efe9df)]" />
@@ -99,7 +101,7 @@ function HeroImage({
       sizes={sizes}
       unoptimized
       className="object-cover"
-      style={{ objectPosition: `${Math.max(0, Math.min(100, 50 + heroPosition / 2))}% center` }}
+      style={{ objectPosition: `${Math.max(0, Math.min(100, 50 + heroPosition / 2))}% ${Math.max(0, Math.min(100, 50 + heroPositionY / 2))}%` }}
     />
   )
 }
@@ -242,6 +244,7 @@ function EditorialHero({
                 priority={index === 0}
                 sizes={HERO_IMAGE_SIZES}
                 heroPosition={isActive ? 0 : photo.hero_position ?? 0}
+                heroPositionY={isActive ? 0 : photo.hero_position_y ?? 0}
               />
               <span className="absolute inset-0 bg-black/0 transition-colors duration-700" />
               <span className={`absolute bottom-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold uppercase text-white/72 transition-opacity duration-500 xl:block ${

@@ -60,6 +60,7 @@ export type BackupImageRecord = {
   show: number;
   show_on_mainpage: number;
   sort: number;
+  hero_position_y: number;
   del: number;
   createdAt: string;
   updatedAt: string | null;

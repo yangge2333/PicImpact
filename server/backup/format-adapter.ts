@@ -93,6 +93,7 @@ const backupImageRecordSchema = z.object({
   show: z.number().int(),
   show_on_mainpage: z.number().int(),
   sort: z.number().int(),
+  hero_position_y: z.number().int().default(0),
   del: z.number().int(),
   createdAt: isoDateStringSchema,
   updatedAt: isoDateStringSchema.nullable(),
