@@ -24,7 +24,6 @@ import {
 import { badRequest, conflict, serverError } from '~/hono/_lib/errors'
 import { ok } from '~/hono/_lib/response'
 import { db } from '~/server/lib/db'
-import { amountMatchesCents, createAlipayPagePayment, getWakaBookingDepositCents, verifyAlipayNotification } from '~/server/payment/alipay'
 
 const app = new Hono()
 
@@ -41,10 +40,6 @@ function getClientIp(c: { req: { header: (name: string) => string | undefined } 
   const forwardedFor = c.req.header('x-forwarded-for')
   const realIp = c.req.header('x-real-ip')
   return (forwardedFor?.split(',')[0]?.trim() || realIp?.trim() || 'unknown').slice(0, 64)
-}
-
-function isMobileUserAgent(userAgent: string | undefined) {
-  return /Android|iPhone|iPad|iPod|Windows Phone|Mobile/i.test(userAgent || '')
 }
 
 function getLocalDayRange() {
@@ -91,7 +86,6 @@ app.get('/config', async (c) => {
       })),
       closedDates: settings.closedDates.map((closedDate) => closedDate.date.toISOString().slice(0, 10)),
       studios: studios.filter((studio) => studio.enabled).map((studio) => ({ id: studio.id, name: studio.name })),
-      depositAmount: getWakaBookingDepositCents() / 100,
     })
   } catch (error) {
     throw serverError('Failed to fetch booking config', error)
@@ -118,19 +112,21 @@ app.get('/availability', async (c) => {
       where: {
         studioId,
         bookingDate: { gte: fromDate, lt: toExclusive },
-        OR: [
-          { status: { in: ['pending', 'confirmed'] } },
-          { status: 'payment_pending', paymentExpiresAt: { gt: new Date() } },
-        ],
+        status: { in: ['pending', 'confirmed'] },
       },
       select: { bookingDate: true, startMinutes: true, endMinutes: true, customerName: true, status: true },
     })
 
-    const bookedByDate = new Map<string, Array<{ startMinutes: number; endMinutes: number; customerName: string | null }>>()
+    const bookedByDate = new Map<string, Array<{ startMinutes: number; endMinutes: number; customerName: string | null; status: 'pending' | 'confirmed' }>>()
     for (const booking of bookings) {
       const date = booking.bookingDate.toISOString().slice(0, 10)
       const ranges = bookedByDate.get(date) || []
-      ranges.push({ startMinutes: booking.startMinutes, endMinutes: booking.endMinutes, customerName: booking.status === 'payment_pending' ? null : booking.customerName })
+      ranges.push({
+        startMinutes: booking.startMinutes,
+        endMinutes: booking.endMinutes,
+        customerName: booking.status === 'confirmed' ? booking.customerName : null,
+        status: booking.status as 'pending' | 'confirmed',
+      })
       bookedByDate.set(date, ranges)
     }
 
@@ -227,11 +223,7 @@ app.post('/', async (c) => {
       }
     }
 
-    const paymentOrderNo = `waka_${createId()}`
-    const paymentAmount = getWakaBookingDepositCents()
-    const payment = createAlipayPagePayment(paymentOrderNo, paymentAmount, isMobileUserAgent(c.req.header('user-agent')) ? 'wap' : 'page')
-    const paymentExpiresAt = new Date(Date.now() + 15 * 60 * 1000)
-    await db.$transaction(async (tx) => {
+    const bookings = await db.$transaction(async (tx) => {
       const { start: todayStart, end: tomorrowStart } = getLocalDayRange()
       const sameDayBookingCount = await tx.wakaBooking.count({
         where: { ipAddress, createdAt: { gte: todayStart, lt: tomorrowStart } },
@@ -245,10 +237,7 @@ app.post('/', async (c) => {
           where: {
             studioId,
             bookingDate: range.dateValue as Date,
-            OR: [
-              { status: { in: ['pending', 'confirmed'] } },
-              { status: 'payment_pending', paymentExpiresAt: { gt: new Date() } },
-            ],
+            status: { in: ['pending', 'confirmed'] },
             startMinutes: { lt: range.endMinutes },
             endMinutes: { gt: range.startMinutes },
           },
@@ -268,11 +257,7 @@ app.post('/', async (c) => {
             ipAddress,
             customerName: customerName || null,
             note: note || null,
-            status: 'payment_pending',
-            paymentOrderNo,
-            paymentProvider: 'alipay',
-            paymentAmount,
-            paymentExpiresAt,
+            status: 'pending',
           },
           include: { studio: { select: { name: true } } },
         }))
@@ -280,14 +265,7 @@ app.post('/', async (c) => {
       return createdBookings
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
-    return ok(c, {
-      orderNo: paymentOrderNo,
-      amount: paymentAmount / 100,
-      mode: payment.mode,
-      expiresAt: paymentExpiresAt.toISOString(),
-      gateway: payment.gateway,
-      params: payment.params,
-    })
+    return ok(c, bookings.length === 1 ? serializeBooking(bookings[0]) : bookings.map(serializeBooking))
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code)) {
       throw conflict('该时间段刚刚被预约，请重新选择')
@@ -296,85 +274,6 @@ app.post('/', async (c) => {
       throw error
     }
     throw serverError('Failed to create booking', error)
-  }
-})
-
-app.get('/payment-status', async (c) => {
-  try {
-    const orderNo = asString(c.req.query('orderNo'))
-    if (!orderNo) {
-      throw badRequest('支付订单编号无效')
-    }
-
-    const bookings = await db.wakaBooking.findMany({
-      where: { paymentOrderNo: orderNo },
-      select: { status: true, paymentAmount: true, paymentExpiresAt: true, paidAt: true },
-    })
-    if (!bookings.length) {
-      throw badRequest('支付订单不存在')
-    }
-
-    const now = new Date()
-    const paid = bookings.every((booking) => booking.paidAt && booking.status !== 'payment_pending')
-    const expired = bookings.every((booking) => booking.status === 'payment_pending' && booking.paymentExpiresAt && booking.paymentExpiresAt <= now)
-    return ok(c, {
-      orderNo,
-      status: paid ? 'paid' : expired ? 'expired' : 'pending',
-      amount: (bookings[0].paymentAmount || 0) / 100,
-    })
-  } catch (error) {
-    if (error instanceof HTTPException) {
-      throw error
-    }
-    throw serverError('Failed to fetch payment status', error)
-  }
-})
-
-app.post('/alipay/notify', async (c) => {
-  try {
-    const body = await c.req.parseBody()
-    const params: Record<string, string> = {}
-    for (const [key, value] of Object.entries(body)) {
-      if (typeof value === 'string') {
-        params[key] = value
-      }
-    }
-
-    if (!verifyAlipayNotification(params)) {
-      return c.text('fail', 400)
-    }
-
-    const tradeStatus = params.trade_status
-    if (!['TRADE_SUCCESS', 'TRADE_FINISHED'].includes(tradeStatus)) {
-      return c.text('success')
-    }
-
-    const orderNo = asString(params.out_trade_no)
-    const tradeNo = asString(params.trade_no).slice(0, 80)
-    if (!orderNo) {
-      return c.text('fail', 400)
-    }
-
-    const bookings = await db.wakaBooking.findMany({
-      where: { paymentOrderNo: orderNo },
-      select: { paymentAmount: true },
-    })
-    if (!bookings.length || !bookings[0].paymentAmount || !amountMatchesCents(params.total_amount, bookings[0].paymentAmount)) {
-      return c.text('fail', 400)
-    }
-
-    await db.wakaBooking.updateMany({
-      where: { paymentOrderNo: orderNo, status: 'payment_pending' },
-      data: {
-        status: 'pending',
-        paidAt: new Date(),
-        providerTradeNo: tradeNo || null,
-      },
-    })
-    return c.text('success')
-  } catch (error) {
-    console.error('Alipay notify failed:', error instanceof Error ? error.message : error)
-    return c.text('fail', 400)
   }
 })
 

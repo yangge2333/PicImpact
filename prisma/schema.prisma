@@ -262,37 +262,26 @@ model WakaBookingStudio {
 }
 
 model WakaBooking {
-  id               String            @id @default(cuid()) @db.VarChar(50)
-  studioId         String            @map("studio_id") @db.VarChar(50)
-  bookingDate      DateTime          @map("booking_date") @db.Date
-  startMinutes     Int               @map("start_minutes") @db.SmallInt
-  endMinutes       Int               @map("end_minutes") @db.SmallInt
-  contactType      String            @map("contact_type") @db.VarChar(20)
-  contactValue     String            @map("contact_value") @db.VarChar(120)
-  ipAddress        String?           @map("ip_address") @db.VarChar(64)
-  customerName     String?           @map("customer_name") @db.VarChar(80)
-  note             String?           @db.Text
-  status           String            @default("pending") @db.VarChar(20)
-  adminNote        String?           @map("admin_note") @db.Text
-  confirmedAt      DateTime?         @map("confirmed_at") @db.Timestamp
-  paymentOrderNo   String?           @map("payment_order_no") @db.VarChar(80)
-  paymentProvider  String?           @map("payment_provider") @db.VarChar(20)
-  paymentAmount    Int?              @map("payment_amount") @db.Integer
-  paymentExpiresAt DateTime?         @map("payment_expires_at") @db.Timestamp
-  paidAt           DateTime?         @map("paid_at") @db.Timestamp
-  providerTradeNo  String?           @map("provider_trade_no") @db.VarChar(80)
-  refundRequestNo  String?           @map("refund_request_no") @db.VarChar(80)
-  refundAmount     Int?              @map("refund_amount") @db.Integer
-  refundStatus     String?           @map("refund_status") @db.VarChar(20)
-  refundedAt       DateTime?         @map("refunded_at") @db.Timestamp
-  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamp
-  updatedAt        DateTime?         @updatedAt @map("updated_at") @db.Timestamp
-  studio           WakaBookingStudio @relation(fields: [studioId], references: [id])
+  id           String            @id @default(cuid()) @db.VarChar(50)
+  studioId     String            @map("studio_id") @db.VarChar(50)
+  bookingDate  DateTime          @map("booking_date") @db.Date
+  startMinutes Int               @map("start_minutes") @db.SmallInt
+  endMinutes   Int               @map("end_minutes") @db.SmallInt
+  contactType  String            @map("contact_type") @db.VarChar(20)
+  contactValue String            @map("contact_value") @db.VarChar(120)
+  ipAddress    String?           @map("ip_address") @db.VarChar(64)
+  customerName String?           @map("customer_name") @db.VarChar(80)
+  note         String?           @db.Text
+  status       String            @default("pending") @db.VarChar(20)
+  adminNote    String?           @map("admin_note") @db.Text
+  confirmedAt  DateTime?         @map("confirmed_at") @db.Timestamp
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime?         @updatedAt @map("updated_at") @db.Timestamp
+  studio       WakaBookingStudio @relation(fields: [studioId], references: [id])
 
   @@index([bookingDate, status])
   @@index([studioId, bookingDate, status])
   @@index([ipAddress, createdAt])
   @@index([contactType, contactValue])
-  @@index([paymentOrderNo])
   @@map("waka_bookings")
 }

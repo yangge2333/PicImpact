@@ -7,7 +7,6 @@ import download from '~/hono/open/download'
 import images from '~/hono/open/images'
 import cameraLens from '~/hono/open/camera-lens'
 import wakaBooking from '~/hono/waka-booking'
-import alipayGateway from '~/hono/alipay-gateway'
 
 const app = new Hono().basePath('/api')
 
@@ -25,7 +24,6 @@ app.route('/public/download', download)
 app.route('/public/images', images)
 app.route('/public/camera-lens', cameraLens)
 app.route('/waka/booking', wakaBooking)
-app.route('/alipay/gateway', alipayGateway)
 app.notFound((c) => {
   return c.text('not found', 404)
 })

@@ -1,6 +1,6 @@
 import { db } from '~/server/lib/db'
 
-export const BOOKING_STATUSES = ['payment_pending', 'pending', 'confirmed', 'rejected', 'cancelled'] as const
+export const BOOKING_STATUSES = ['pending', 'confirmed', 'rejected', 'cancelled'] as const
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 
 export const CONTACT_TYPES = ['phone', 'wechat', 'other'] as const
@@ -162,14 +162,14 @@ export function isClosedDate(closedDates: Array<{ date: Date }>, date: string) {
 export function buildSlots(
   schedule: { enabled: boolean; openMinutes: number; closeMinutes: number },
   slotMinutes: number,
-  bookedRanges: Array<{ startMinutes: number; endMinutes: number; customerName: string | null }>,
+  bookedRanges: Array<{ startMinutes: number; endMinutes: number; customerName: string | null; status: 'pending' | 'confirmed' }>,
   minimumStartMinutes?: number,
 ) {
   if (!schedule.enabled) {
     return []
   }
 
-  const slots: Array<{ startMinutes: number; endMinutes: number; start: string; end: string; available: boolean; booked: boolean; customerName: string | null }> = []
+  const slots: Array<{ startMinutes: number; endMinutes: number; start: string; end: string; available: boolean; booked: boolean; bookingStatus: 'pending' | 'confirmed' | null; customerName: string | null }> = []
   for (
     let startMinutes = schedule.openMinutes;
     startMinutes + slotMinutes <= schedule.closeMinutes;
@@ -185,6 +185,7 @@ export function buildSlots(
       end: formatMinutes(startMinutes + slotMinutes),
       available: !booked && !passed,
       booked,
+      bookingStatus: bookedRange?.status || null,
       customerName: bookedRange?.customerName || null,
     })
   }
@@ -204,7 +205,6 @@ export function serializeBooking(booking: {
   status: string
   adminNote: string | null
   confirmedAt: Date | null
-  refundStatus?: string | null
   createdAt: Date
   studio?: { name: string } | null
 }) {
@@ -222,7 +222,6 @@ export function serializeBooking(booking: {
     status: booking.status,
     adminNote: booking.adminNote,
     confirmedAt: booking.confirmedAt?.toISOString() || null,
-    refundStatus: booking.refundStatus || null,
     createdAt: booking.createdAt.toISOString(),
   }
 }
