@@ -29,6 +29,7 @@ import { CogIcon } from '~/components/icons/cog'
 import { FingerprintIcon } from '~/components/icons/fingerprint'
 import { LoaderPinwheelIcon } from '~/components/icons/loader-pinwheel'
 import { KeySquareIcon } from '~/components/icons/key-square'
+import { CameraIcon } from '~/components/icons/camera'
 import { CalendarDaysIcon } from '~/components/icons/calendar-days'
 import { ListTodoIcon } from '~/components/icons/list-todo'
 import { DownloadIcon } from '~/components/icons/download'
@@ -82,6 +83,11 @@ export function AppSidebar({
         title: '预约排班',
         url: '/admin/booking',
         icon: CalendarDaysIcon,
+      },
+      {
+        title: '器材资产',
+        url: '/admin/equipment-assets',
+        icon: CameraIcon,
       },
       {
         title: t('Link.about'),

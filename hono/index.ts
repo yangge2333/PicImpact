@@ -10,6 +10,7 @@ import tasks from '~/hono/tasks'
 import backup from '~/hono/backup'
 import visits from '~/hono/visits'
 import booking from '~/hono/booking'
+import equipmentAssets from '~/hono/equipment-assets'
 import { HTTPException } from 'hono/http-exception'
 import { sessionMiddleware } from '~/hono/_lib/context'
 
@@ -36,5 +37,6 @@ route.route('/tasks', tasks)
 route.route('/backup', backup)
 route.route('/visits', visits)
 route.route('/booking', booking)
+route.route('/equipment-assets', equipmentAssets)
 
 export default route
