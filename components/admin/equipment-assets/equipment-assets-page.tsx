@@ -27,6 +27,22 @@ import {
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
+import { Badge } from '~/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '~/components/ui/table'
 import { STORAGE_OPTIONS, useUploadConfig } from '~/hooks/use-upload-config'
 
 type EquipmentStatus = 'available' | 'in_use' | 'maintenance' | 'retired';
@@ -89,6 +105,7 @@ interface AssetForm {
 
 const PAGE_SIZE = 10
 const MAX_IMAGES = 6
+const ALL_FILTER_VALUE = '__all__'
 
 const STATUS_OPTIONS: Array<{ value: EquipmentStatus; label: string }> = [
   { value: 'available', label: '可用' },
@@ -465,30 +482,42 @@ export default function EquipmentAssetsPage() {
           onKeyDown={(event) => event.key === 'Enter' && void loadAssets(1)}
           placeholder="搜索编号、名称、品牌、型号或序列号"
         />
-        <select
-          className="h-9 rounded-md border bg-background px-3 text-sm"
-          value={categoryFilter}
-          onChange={(event) => setCategoryFilter(event.target.value)}
+        <Select
+          value={categoryFilter || ALL_FILTER_VALUE}
+          onValueChange={(value) =>
+            setCategoryFilter(value === ALL_FILTER_VALUE ? '' : value)
+          }
         >
-          <option value="">全部分类</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-9 rounded-md border bg-background px-3 text-sm"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
+          <SelectTrigger className="w-full bg-background">
+            <SelectValue placeholder="全部分类" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_FILTER_VALUE}>全部分类</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={statusFilter || ALL_FILTER_VALUE}
+          onValueChange={(value) =>
+            setStatusFilter(value === ALL_FILTER_VALUE ? '' : value)
+          }
         >
-          <option value="">全部状态</option>
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full bg-background">
+            <SelectValue placeholder="全部状态" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_FILTER_VALUE}>全部状态</SelectItem>
+            {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button onClick={() => void loadAssets(1)}>
           <RefreshCwIcon className="size-4" />
           查询
@@ -496,122 +525,131 @@ export default function EquipmentAssetsPage() {
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-sm">
-            <thead className="border-b bg-muted/40 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">图片</th>
-                <th className="px-4 py-3 font-medium">资产编号</th>
-                <th className="px-4 py-3 font-medium">器材 / 分类</th>
-                <th className="px-4 py-3 font-medium">品牌 / 型号</th>
-                <th className="px-4 py-3 font-medium">状态</th>
-                <th className="px-4 py-3 font-medium">存放位置</th>
-                <th className="px-4 py-3 font-medium">保管人</th>
-                <th className="px-4 py-3 text-right font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="h-40 text-center text-muted-foreground"
-                  >
-                    <Loader2Icon className="mx-auto size-5 animate-spin" />
-                  </td>
-                </tr>
-              ) : assets.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="h-40 text-center text-muted-foreground"
-                  >
-                    暂无符合条件的器材
-                  </td>
-                </tr>
-              ) : (
-                assets.map((asset) => (
-                  <tr key={asset.id} className="border-b last:border-0">
-                    <td className="px-4 py-3">
-                      {asset.imageUrls[0] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={asset.imageUrls[0]}
-                          alt={asset.name}
-                          className="size-14 rounded-md border object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-14 items-center justify-center rounded-md border bg-muted text-muted-foreground">
-                          <CameraIcon className="size-5" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">
-                      {asset.assetNumber}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{asset.name}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {asset.category.name}
+        <Table className="min-w-[1100px] text-sm">
+          <TableHeader className="bg-muted/40 text-left">
+            <TableRow>
+              <TableHead className="px-4 py-3 font-medium">图片</TableHead>
+              <TableHead className="px-4 py-3 font-medium">资产编号</TableHead>
+              <TableHead className="px-4 py-3 font-medium">
+                器材 / 分类
+              </TableHead>
+              <TableHead className="px-4 py-3 font-medium">
+                品牌 / 型号
+              </TableHead>
+              <TableHead className="px-4 py-3 font-medium">状态</TableHead>
+              <TableHead className="px-4 py-3 font-medium">存放位置</TableHead>
+              <TableHead className="px-4 py-3 font-medium">保管人</TableHead>
+              <TableHead className="px-4 py-3 text-right font-medium">
+                操作
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={8}
+                  className="h-40 text-center text-muted-foreground"
+                >
+                  <Loader2Icon className="mx-auto size-5 animate-spin" />
+                </TableCell>
+              </TableRow>
+            ) : assets.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={8}
+                  className="h-40 text-center text-muted-foreground"
+                >
+                  暂无符合条件的器材
+                </TableCell>
+              </TableRow>
+            ) : (
+              assets.map((asset) => (
+                <TableRow key={asset.id} className="border-b last:border-0">
+                  <TableCell className="px-4 py-3">
+                    {asset.imageUrls[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={asset.imageUrls[0]}
+                        alt={asset.name}
+                        className="size-14 rounded-md border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-14 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                        <CameraIcon className="size-5" />
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>{asset.brand || '-'}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {asset.model || asset.serialNumber || '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-muted px-2.5 py-1 text-xs">
-                        {statusLabel(asset.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {asset.storageLocation || '-'}
-                    </td>
-                    <td className="px-4 py-3">{asset.custodian || '-'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="上移"
-                          onClick={() => void moveAsset(asset, 'up')}
-                        >
-                          <ArrowUpIcon className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="下移"
-                          onClick={() => void moveAsset(asset, 'down')}
-                        >
-                          <ArrowDownIcon className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="编辑"
-                          onClick={() => openEditDialog(asset)}
-                        >
-                          <PencilIcon className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="删除"
-                          onClick={() => void deleteAsset(asset)}
-                        >
-                          <Trash2Icon className="size-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 font-mono text-xs">
+                    {asset.assetNumber}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="font-medium">{asset.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {asset.category.name}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div>{asset.brand || '-'}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {asset.model || asset.serialNumber || '-'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <Badge
+                      variant="secondary"
+                      className="rounded-full border-0 bg-muted px-2.5 py-1 font-normal"
+                    >
+                      {statusLabel(asset.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    {asset.storageLocation || '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    {asset.custodian || '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="上移"
+                        onClick={() => void moveAsset(asset, 'up')}
+                      >
+                        <ArrowUpIcon className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="下移"
+                        onClick={() => void moveAsset(asset, 'down')}
+                      >
+                        <ArrowDownIcon className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="编辑"
+                        onClick={() => openEditDialog(asset)}
+                      >
+                        <PencilIcon className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="删除"
+                        onClick={() => void deleteAsset(asset)}
+                      >
+                        <Trash2Icon className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
         <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
           <span className="text-muted-foreground">
             共 {total} 件器材，第 {page} / {pageCount} 页
@@ -668,36 +706,41 @@ export default function EquipmentAssetsPage() {
             </div>
             <div className="space-y-2">
               <Label>分类 *</Label>
-              <select
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                value={form.categoryId}
-                onChange={(event) =>
-                  updateForm('categoryId', event.target.value)
-                }
+              <Select
+                value={form.categoryId || undefined}
+                onValueChange={(value) => updateForm('categoryId', value)}
               >
-                <option value="">请选择分类</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue placeholder="请选择分类" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>使用状态</Label>
-              <select
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              <Select
                 value={form.status}
-                onChange={(event) =>
-                  updateForm('status', event.target.value as EquipmentStatus)
+                onValueChange={(value) =>
+                  updateForm('status', value as EquipmentStatus)
                 }
               >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>品牌</Label>
@@ -775,34 +818,40 @@ export default function EquipmentAssetsPage() {
             <div className="space-y-3 md:col-span-2">
               <Label>器材图片</Label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <select
-                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                <Select
                   value={storage}
-                  onChange={(event) =>
-                    void handleStorageChange(event.target.value)
-                  }
+                  onValueChange={(value) => void handleStorageChange(value)}
                 >
-                  {STORAGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {storageSelect && (
-                  <select
-                    className="h-9 rounded-md border bg-background px-3 text-sm"
-                    value={openListMountPath}
-                    onChange={(event) =>
-                      setOpenListMountPath(event.target.value)
-                    }
-                  >
-                    <option value="">请选择 OpenList 目录</option>
-                    {openListStorage.map((item) => (
-                      <option key={item.mount_path} value={item.mount_path}>
-                        {item.mount_path}
-                      </option>
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STORAGE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
                     ))}
-                  </select>
+                  </SelectContent>
+                </Select>
+                {storageSelect && (
+                  <Select
+                    value={openListMountPath || undefined}
+                    onValueChange={setOpenListMountPath}
+                  >
+                    <SelectTrigger className="w-full bg-background">
+                      <SelectValue placeholder="请选择 OpenList 目录" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {openListStorage.map((item) => (
+                        <SelectItem
+                          key={item.mount_path}
+                          value={item.mount_path}
+                        >
+                          {item.mount_path}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
@@ -814,9 +863,11 @@ export default function EquipmentAssetsPage() {
                       alt={`器材图片 ${index + 1}`}
                       className="size-24 rounded-md border object-cover"
                     />
-                    <button
+                    <Button
                       type="button"
-                      className="absolute -right-2 -top-2 rounded-full border bg-background p-1 shadow"
+                      size="icon"
+                      variant="outline"
+                      className="absolute -right-2 -top-2 size-6 rounded-full p-1 shadow"
                       onClick={() =>
                         updateForm(
                           'imageUrls',
@@ -828,7 +879,7 @@ export default function EquipmentAssetsPage() {
                     >
                       <XIcon className="size-3" />
                       <span className="sr-only">移除图片</span>
-                    </button>
+                    </Button>
                   </div>
                 ))}
                 {form.imageUrls.length < MAX_IMAGES && (
