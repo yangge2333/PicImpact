@@ -52,7 +52,7 @@ export async function fetchEquipmentAssets(filters: EquipmentAssetFilters) {
     db.equipmentAsset.findMany({
       where,
       include: { category: { select: { id: true, name: true } } },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

@@ -19,6 +19,7 @@ import {
   createEquipmentAssetCategory,
   deleteEquipmentAsset,
   deleteEquipmentAssetCategory,
+  moveEquipmentAsset,
   updateEquipmentAsset,
   updateEquipmentAssetCategory,
   type EquipmentAssetData,
@@ -191,6 +192,22 @@ app.post('/', async (c) => {
     return ok(
       c,
       serializeAsset(await createEquipmentAsset(parseAssetBody(body))),
+    )
+  } catch (error) {
+    handleMutationError(error)
+  }
+})
+
+app.patch('/:id/order', async (c) => {
+  try {
+    const body = await c.req.json<Record<string, unknown>>()
+    const direction = body.direction
+    if (direction !== 'up' && direction !== 'down') {
+      throw badRequest('排序方向无效')
+    }
+    return ok(
+      c,
+      await moveEquipmentAsset(c.req.param('id'), direction),
     )
   } catch (error) {
     handleMutationError(error)

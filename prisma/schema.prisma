@@ -304,6 +304,7 @@ model EquipmentAsset {
   name            String                 @db.VarChar(200)
   categoryId      String                 @map("category_id") @db.VarChar(50)
   category        EquipmentAssetCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sort            Int                    @default(0)
   brand           String?                @db.VarChar(100)
   model           String?                @db.VarChar(100)
   serialNumber    String?                @map("serial_number") @db.VarChar(100)
@@ -318,6 +319,7 @@ model EquipmentAsset {
   updatedAt       DateTime?              @updatedAt @map("updated_at") @db.Timestamp
 
   @@index([categoryId, status])
+  @@index([categoryId, sort])
   @@index([createdAt])
   @@map("equipment_assets")
 }

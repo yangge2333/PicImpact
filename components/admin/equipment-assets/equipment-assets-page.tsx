@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CameraIcon,
   ImagePlusIcon,
   Loader2Icon,
@@ -304,6 +306,26 @@ export default function EquipmentAssetsPage() {
     }
   }
 
+  async function moveAsset(asset: EquipmentAsset, direction: 'up' | 'down') {
+    try {
+      const result = await request<{ moved: boolean }>(
+        `/api/v1/equipment-assets/${asset.id}/order`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ direction }),
+        },
+      )
+      if (result.moved) {
+        toast.success('排序已更新')
+        await loadAssets(page)
+      } else {
+        toast.info(direction === 'up' ? '已经是第一项' : '已经是最后一项')
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '调整排序失败')
+    }
+  }
+
   async function uploadImages(files: FileList | null) {
     if (!files?.length) return
     const remaining = MAX_IMAGES - form.imageUrls.length
@@ -550,6 +572,22 @@ export default function EquipmentAssetsPage() {
                     <td className="px-4 py-3">{asset.custodian || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="上移"
+                          onClick={() => void moveAsset(asset, 'up')}
+                        >
+                          <ArrowUpIcon className="size-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="下移"
+                          onClick={() => void moveAsset(asset, 'down')}
+                        >
+                          <ArrowDownIcon className="size-4" />
+                        </Button>
                         <Button
                           size="icon"
                           variant="ghost"
