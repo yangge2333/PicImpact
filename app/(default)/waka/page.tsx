@@ -3,6 +3,7 @@ import { CopyAddressButton } from '~/components/layout/theme/copy-address-button
 import { WakaLocationMap } from '~/components/layout/theme/waka-location-map'
 import { cachedConfigsByKeys } from '~/server/lib/cache'
 import { toCustomInfo } from '~/server/lib/config-transform'
+import { fetchEquipmentAssets } from '~/server/db/query/equipment-assets'
 
 export async function generateMetadata() {
   const rows = await cachedConfigsByKeys(['custom_title'])
@@ -18,6 +19,24 @@ export default async function WakaImpressionPage() {
   const title = toCustomInfo(rows).customTitle || '船长的摄影小屋'
   const amapKey = process.env.AMAP_JS_API_KEY
   const amapSecurityCode = process.env.AMAP_SECURITY_JSCODE
+  const equipment = await fetchEquipmentAssets({ page: 1, pageSize: 100 })
+  const equipmentGroups = Array.from(
+    equipment.items.reduce((groups, asset) => {
+      const key = `${asset.categoryId}:${asset.brand || ''}:${asset.model || asset.name}`
+      const current = groups.get(key)
+      if (current) {
+        current.quantity += 1
+      } else {
+        groups.set(key, {
+          categoryName: asset.category.name,
+          brand: asset.brand,
+          model: asset.model || asset.name,
+          quantity: 1,
+        })
+      }
+      return groups
+    }, new Map<string, { categoryName: string; brand: string | null; model: string; quantity: number }>()).values(),
+  )
 
   return (
     <div className="min-h-[calc(100svh-2.5rem)] bg-background">
@@ -77,6 +96,55 @@ export default async function WakaImpressionPage() {
             />
           </div>
         </section>
+
+        {equipmentGroups.length > 0 && (
+          <section
+            className="mt-12 border-t border-border/70 pt-8"
+            aria-labelledby="waka-equipment-title"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Equipment
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <h2
+                id="waka-equipment-title"
+                className="text-2xl font-semibold text-foreground"
+              >
+                设备清单
+              </h2>
+              <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                {equipment.items.length} 件
+              </span>
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {equipmentGroups.map((equipmentItem) => (
+                <article
+                  key={`${equipmentItem.categoryName}-${equipmentItem.brand}-${equipmentItem.model}`}
+                  className="rounded-2xl border border-border/70 bg-background/60 p-4 shadow-sm"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {equipmentItem.categoryName}
+                  </p>
+                  <div className="mt-3 flex items-baseline justify-between gap-3">
+                    <h3 className="font-medium text-foreground">
+                      {equipmentItem.model}
+                    </h3>
+                    {equipmentItem.quantity > 1 && (
+                      <span className="shrink-0 text-sm text-muted-foreground">
+                        × {equipmentItem.quantity}
+                      </span>
+                    )}
+                  </div>
+                  {equipmentItem.brand && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {equipmentItem.brand}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
       </section>
     </div>
   )
