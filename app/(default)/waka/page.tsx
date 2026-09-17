@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { CameraIcon } from 'lucide-react'
 import { CopyAddressButton } from '~/components/layout/theme/copy-address-button'
 import { WakaLocationMap } from '~/components/layout/theme/waka-location-map'
 import { cachedConfigsByKeys } from '~/server/lib/cache'
@@ -24,18 +25,23 @@ export default async function WakaImpressionPage() {
     equipment.items.reduce((groups, asset) => {
       const key = `${asset.categoryId}:${asset.brand || ''}:${asset.model || asset.name}`
       const current = groups.get(key)
+      const imageUrl = Array.isArray(asset.imageUrls)
+        ? asset.imageUrls.find((url): url is string => typeof url === 'string') || null
+        : null
       if (current) {
         current.quantity += 1
+        current.imageUrl ||= imageUrl
       } else {
         groups.set(key, {
           categoryName: asset.category.name,
           brand: asset.brand,
           model: asset.model || asset.name,
           quantity: 1,
+          imageUrl,
         })
       }
       return groups
-    }, new Map<string, { categoryName: string; brand: string | null; model: string; quantity: number }>()).values(),
+    }, new Map<string, { categoryName: string; brand: string | null; model: string; quantity: number; imageUrl: string | null }>()).values(),
   )
 
   return (
@@ -120,26 +126,46 @@ export default async function WakaImpressionPage() {
               {equipmentGroups.map((equipmentItem) => (
                 <article
                   key={`${equipmentItem.categoryName}-${equipmentItem.brand}-${equipmentItem.model}`}
-                  className="rounded-2xl border border-border/70 bg-background/60 p-4 shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-border/70 bg-background/60 shadow-sm"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {equipmentItem.categoryName}
-                  </p>
-                  <div className="mt-3 flex items-baseline justify-between gap-3">
-                    <h3 className="font-medium text-foreground">
-                      {equipmentItem.model}
-                    </h3>
-                    {equipmentItem.quantity > 1 && (
-                      <span className="shrink-0 text-sm text-muted-foreground">
-                        × {equipmentItem.quantity}
-                      </span>
+                  <div className="relative h-44 bg-muted/60 sm:h-52">
+                    {equipmentItem.imageUrl ? (
+                      <Image
+                        src={equipmentItem.imageUrl}
+                        alt={equipmentItem.model}
+                        fill
+                        sizes="(min-width: 640px) 352px, calc(100vw - 40px)"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <CameraIcon className="size-9 stroke-[1.25]" />
+                        <span className="text-xs tracking-[0.16em]">图片待补充</span>
+                      </div>
                     )}
+                    <span className="absolute left-4 top-4 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                      {equipmentItem.categoryName}
+                    </span>
                   </div>
-                  {equipmentItem.brand && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {equipmentItem.brand}
-                    </p>
-                  )}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        {equipmentItem.brand && (
+                          <p className="text-sm font-semibold tracking-wide text-muted-foreground">
+                            {equipmentItem.brand}
+                          </p>
+                        )}
+                        <h3 className="mt-1 text-xl font-semibold leading-tight text-foreground">
+                          {equipmentItem.model}
+                        </h3>
+                      </div>
+                      {equipmentItem.quantity > 1 && (
+                        <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                          × {equipmentItem.quantity}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </article>
               ))}
             </div>
